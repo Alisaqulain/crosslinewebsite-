@@ -100,7 +100,7 @@ export default function AdminBookingsPage() {
                 <th className="p-4 font-medium">ID</th>
                 <th className="p-4 font-medium">Customer</th>
                 <th className="p-4 font-medium">Date / Slot</th>
-                <th className="p-4 font-medium">Match</th>
+                <th className="p-4 font-medium">Team / Players</th>
                 <th className="p-4 font-medium">Amount</th>
                 <th className="p-4 font-medium">Status</th>
                 <th className="p-4 font-medium">Actions</th>
@@ -127,9 +127,9 @@ export default function AdminBookingsPage() {
                       <span className="text-xs text-slate-500">{b.slotLabel}</span>
                     </td>
                     <td className="p-4 text-slate-400 text-xs">
-                      {b.matchType}
+                      <span className="text-white font-medium">{b.teamName || b.playersOrTeam}</span>
                       <br />
-                      {b.playersOrTeam}
+                      {b.numberOfPlayers ? `${b.numberOfPlayers} players` : ""} · {b.matchType}
                     </td>
                     <td className="p-4">
                       <p className="text-white">{formatCurrency(b.totalAmount)}</p>

@@ -6,7 +6,15 @@ import type { AppStore } from "@/lib/types";
 
 type PublicData = Pick<
   AppStore,
-  "slots" | "blockedDates" | "advancePercentage" | "liveStream" | "liveScore" | "gallery" | "siteContent"
+  | "slots"
+  | "blockedDates"
+  | "advancePercentage"
+  | "liveStream"
+  | "liveScore"
+  | "gallery"
+  | "siteContent"
+  | "tournaments"
+  | "academy"
 > & { allSlots?: AppStore["slots"] };
 
 export function usePublicData(pollScore = false) {

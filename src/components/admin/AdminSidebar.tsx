@@ -12,6 +12,8 @@ import {
   Trophy,
   BarChart3,
   FileText,
+  Medal,
+  GraduationCap,
   LogOut,
 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
@@ -26,6 +28,8 @@ const links = [
   { href: "/admin/stream", label: "Live Video", icon: Radio },
   { href: "/admin/payments", label: "Reports", icon: BarChart3 },
   { href: "/admin/content", label: "Website Content", icon: FileText },
+  { href: "/admin/tournaments", label: "Tournaments", icon: Medal },
+  { href: "/admin/academy", label: "Academy", icon: GraduationCap },
 ];
 
 export function AdminSidebar() {
@@ -34,7 +38,7 @@ export function AdminSidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 h-full w-64 border-r border-white/8 bg-[#070d12] hidden lg:flex flex-col">
       <div className="p-5 border-b border-white/8">
-        <Logo />
+        <Logo light />
         <p className="mt-2 text-xs text-slate-500">Admin Panel</p>
       </div>
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">

@@ -1,96 +1,160 @@
 @import "tailwindcss";
 
 :root {
-  --brand-red: #ed1c24;
-  --brand-red-dark: #c1272d;
-  --brand-orange: #f7931e;
-  --brand-gold: #fbb03b;
-  --brand-yellow: #fcee21;
-  --brand-green: #39b54a;
-  --brand-lime: #8cc63f;
-  --surface-dark: #070d12;
-  --surface: #0b1219;
-  --surface-elevated: #141f2b;
-  --surface-card: #1a2736;
-  --border: rgba(255, 255, 255, 0.08);
-  --text-muted: #94a3b8;
-  --gradient-brand: linear-gradient(135deg, #ed1c24 0%, #f7931e 45%, #fbb03b 75%, #39b54a 100%);
-  --gradient-hero: linear-gradient(160deg, #070d12 0%, #0b1219 40%, #0f1a14 100%);
+  --navy: #0a1a3a;
+  --navy-mid: #122a52;
+  --navy-light: #1e3d73;
+  --navy-deep: #060f22;
+  --brand-red: #e31837;
+  --brand-red-hover: #c4122e;
+  --brand-red-glow: rgba(227, 24, 55, 0.45);
+  --cricket-green: #1f8a3c;
+  --cricket-green-light: #2ecc5a;
+  --pitch-green: #1a5c32;
+  --bg: #ffffff;
+  --bg-alt: #f0f4f8;
+  --bg-muted: #e2e8f0;
+  --text: #0a1628;
+  --text-muted: #5a6b82;
+  --border: rgba(10, 26, 58, 0.1);
+  --shadow: 0 8px 32px rgba(10, 26, 58, 0.1);
+  --shadow-lg: 0 20px 50px rgba(10, 26, 58, 0.15);
+  --shadow-glow: 0 0 40px rgba(227, 24, 55, 0.25);
+  --gradient-hero: linear-gradient(135deg, rgba(6, 15, 34, 0.94) 0%, rgba(18, 42, 82, 0.88) 45%, rgba(26, 92, 50, 0.2) 100%);
+  --gradient-navy: linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 100%);
+  --gradient-pitch: linear-gradient(180deg, #1a5c32 0%, #0d3d22 50%, #0a2e1a 100%);
 }
 
 @theme inline {
-  --color-background: var(--surface-dark);
-  --color-foreground: #f1f5f9;
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
   --font-sans: var(--font-outfit);
   --font-display: var(--font-sora);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
-  background: var(--surface-dark);
-  color: #f1f5f9;
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-outfit), system-ui, sans-serif;
 }
 
-.gradient-text {
-  background: var(--gradient-brand);
+.site-theme .gradient-text {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 55%, var(--cricket-green) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.gradient-border {
-  position: relative;
-  background: var(--surface-card);
-  border-radius: 1rem;
+.hero-pattern {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 70% 0%, rgba(227, 24, 55, 0.15), transparent 50%),
+    radial-gradient(ellipse 60% 50% at 0% 100%, rgba(46, 204, 90, 0.12), transparent 50%);
 }
 
-.gradient-border::before {
+.circle-logo-pattern {
+  background-image: radial-gradient(circle at center, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.cricket-ball-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.pitch-texture {
+  background: var(--gradient-pitch);
+  position: relative;
+}
+.pitch-texture::before {
   content: "";
   position: absolute;
   inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  background: var(--gradient-brand);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 48px,
+    rgba(255, 255, 255, 0.03) 48px,
+    rgba(255, 255, 255, 0.03) 50px
+  );
   pointer-events: none;
 }
 
-.glass {
-  background: rgba(20, 31, 43, 0.7);
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
-.hero-pattern {
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(237, 28, 36, 0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(57, 181, 74, 0.08), transparent),
-    radial-gradient(ellipse 50% 30% at 0% 80%, rgba(247, 147, 30, 0.1), transparent);
+.floodlight-glow {
+  box-shadow:
+    0 -20px 60px rgba(255, 220, 120, 0.08),
+    0 0 80px rgba(255, 200, 80, 0.06);
 }
 
-.grid-pattern {
-  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
+.btn-glow:hover {
+  box-shadow: var(--shadow-glow);
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.scoreboard-frame {
+  background: linear-gradient(145deg, #0a1628 0%, #122a52 40%, #0d2240 100%);
+  border: 2px solid rgba(46, 204, 90, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.3),
+    0 24px 48px rgba(0, 0, 0, 0.4);
 }
 
-.shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+.section-padding { padding: 5rem 0; }
+@media (min-width: 768px) { .section-padding { padding: 6.5rem 0; } }
+
+.section-dark {
+  background: var(--gradient-navy);
+  color: white;
 }
+
+.accent-line {
+  width: 48px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--brand-red), var(--cricket-green-light));
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(227, 24, 55, 0.6); }
+  50% { opacity: 0.9; box-shadow: 0 0 0 8px rgba(227, 24, 55, 0); }
+}
+.live-pulse { animation: pulse-live 2s ease-in-out infinite; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float-slow { animation: float 4s ease-in-out infinite; }
+
+.admin-theme {
+  --bg: #070d12;
+  --text: #f1f5f9;
+  --border: rgba(255, 255, 255, 0.08);
+  background: #070d12;
+  color: #f1f5f9;
+  min-height: 100vh;
+}
+.admin-theme .rounded-2xl.border {
+  background: #1a2736 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9;
+}
+.admin-theme input, .admin-theme select, .admin-theme textarea {
+  background: #0b1219 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f1f5f9 !important;
+}
+.admin-theme label { color: #cbd5e1 !important; }

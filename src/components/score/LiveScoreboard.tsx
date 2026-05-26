@@ -37,21 +37,22 @@ interface Props {
   score: LiveScore;
   compact?: boolean;
   className?: string;
+  variant?: "dark" | "premium";
 }
 
-export function LiveScoreboard({ score, compact, className }: Props) {
+export function LiveScoreboard({ score, compact, className, variant = "premium" }: Props) {
   const battingName = score.battingTeam === "A" ? score.teamA : score.teamB;
   const bowlingName = score.battingTeam === "A" ? score.teamB : score.teamA;
   const rr = runRate(score.runs, score.overs, score.balls);
   const oversDisplay = `${score.overs}.${score.balls}`;
 
+  const shellClass =
+    variant === "premium"
+      ? "scoreboard-frame"
+      : "border-white/10 bg-gradient-to-br from-[#0b1219] via-[#141f2b] to-[#0f1a14]";
+
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0b1219] via-[#141f2b] to-[#0f1a14]",
-        className
-      )}
-    >
+    <div className={cn("relative overflow-hidden rounded-3xl border text-white", shellClass, className)}>
       <div className="absolute inset-0 hero-pattern opacity-60 pointer-events-none" />
       <div className="absolute top-0 right-0 w-64 h-64 bg-[#ED1C24]/5 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#39B54A]/5 rounded-full blur-3xl" />

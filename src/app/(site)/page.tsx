@@ -1,42 +1,35 @@
 "use client";
 
 import { Hero } from "@/components/home/Hero";
-import { CTA } from "@/components/home/CTA";
-import { Features } from "@/components/home/Features";
-import { StadiumHighlights } from "@/components/home/StadiumHighlights";
-import { Services } from "@/components/home/Services";
-import { BookingProcess } from "@/components/home/BookingProcess";
-import { GalleryPreview } from "@/components/home/GalleryPreview";
-import { LiveScorePreview } from "@/components/home/LiveScorePreview";
-import { Testimonials } from "@/components/home/Testimonials";
-import { ContactSection } from "@/components/home/ContactSection";
-import { ScrollReveal } from "@/components/animations/ScrollReveal";
+import { AboutPreview } from "@/components/home/previews/AboutPreview";
+import { FacilitiesPreview } from "@/components/home/previews/FacilitiesPreview";
+import { BookingCTA } from "@/components/home/previews/BookingCTA";
+import { LiveMatchPreview } from "@/components/home/previews/LiveMatchPreview";
+import { LiveScorePreview } from "@/components/home/previews/LiveScorePreview";
+import { AcademyPreview } from "@/components/home/previews/AcademyPreview";
+import { TournamentPreview } from "@/components/home/previews/TournamentPreview";
+import { GalleryPreview } from "@/components/home/previews/GalleryPreview";
+import { ContactCTA } from "@/components/home/previews/ContactCTA";
 import { usePublicData } from "@/hooks/usePublicData";
-import { Loader2 } from "lucide-react";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 export default function HomePage() {
   const { data, loading } = usePublicData(true);
 
-  if (loading || !data) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-[#F7931E]" />
-      </div>
-    );
-  }
+  if (loading || !data) return <PageLoader />;
 
   return (
     <>
-      <Hero />
-      <StadiumHighlights highlights={data.siteContent.stadiumHighlights} />
-      <Services />
-      <Features />
-      <BookingProcess />
+      <Hero liveScore={data.liveScore} />
+      <AboutPreview content={data.siteContent} />
+      <FacilitiesPreview />
+      <BookingCTA slots={data.allSlots ?? data.slots} />
+      <LiveMatchPreview stream={data.liveStream} />
       <LiveScorePreview score={data.liveScore} />
+      <AcademyPreview academy={data.academy} />
+      <TournamentPreview tournaments={data.tournaments} />
       <GalleryPreview items={data.gallery} />
-      <Testimonials items={data.siteContent.testimonials} />
-      <ContactSection />
-      <CTA />
+      <ContactCTA />
     </>
   );
 }

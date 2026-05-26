@@ -4,7 +4,7 @@ interface BackgroundVideoProps {
   src: string;
   poster?: string;
   className?: string;
-  overlay?: "dark" | "darker";
+  overlay?: "dark" | "darker" | "custom";
 }
 
 export function BackgroundVideo({
@@ -14,9 +14,11 @@ export function BackgroundVideo({
   overlay = "dark",
 }: BackgroundVideoProps) {
   const overlayClass =
-    overlay === "darker"
-      ? "bg-gradient-to-b from-[#070d12]/95 via-[#070d12]/88 to-[#070d12]/95"
-      : "bg-gradient-to-b from-[#070d12]/90 via-[#070d12]/75 to-[#070d12]/92";
+    overlay === "custom"
+      ? ""
+      : overlay === "darker"
+        ? "bg-gradient-to-b from-[#070d12]/95 via-[#070d12]/88 to-[#070d12]/95"
+        : "bg-gradient-to-b from-[#070d12]/90 via-[#070d12]/75 to-[#070d12]/92";
 
   return (
     <div className={`absolute inset-0 overflow-hidden ${className}`}>
@@ -31,7 +33,7 @@ export function BackgroundVideo({
       >
         <source src={src} type="video/mp4" />
       </video>
-      <div className={`absolute inset-0 ${overlayClass}`} />
+      {overlayClass ? <div className={`absolute inset-0 ${overlayClass}`} /> : null}
     </div>
   );
 }

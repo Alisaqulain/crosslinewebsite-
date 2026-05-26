@@ -12,5 +12,7 @@ export async function GET() {
     liveScore: store.liveScore,
     gallery: store.gallery,
     siteContent: store.siteContent,
+    tournaments: store.tournaments,
+    academy: store.academy,
   });
 }

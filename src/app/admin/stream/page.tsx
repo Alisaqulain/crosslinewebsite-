@@ -15,6 +15,9 @@ export default function AdminStreamPage() {
   const [url, setUrl] = useState("");
   const [isLive, setIsLive] = useState(false);
   const [enabled, setEnabled] = useState(true);
+  const [upcomingTitle, setUpcomingTitle] = useState("");
+  const [upcomingDate, setUpcomingDate] = useState("");
+  const [upcomingDesc, setUpcomingDesc] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -24,6 +27,9 @@ export default function AdminStreamPage() {
       setUrl(store.liveStream.youtubeUrl);
       setIsLive(store.liveStream.isLive);
       setEnabled(store.liveStream.enabled);
+      setUpcomingTitle(store.liveStream.upcomingTitle ?? "");
+      setUpcomingDate(store.liveStream.upcomingDate?.slice(0, 16) ?? "");
+      setUpcomingDesc(store.liveStream.upcomingDescription ?? "");
       setLoading(false);
     });
   }, []);
@@ -31,7 +37,15 @@ export default function AdminStreamPage() {
   const save = async () => {
     setSaving(true);
     try {
-      await patchAdmin("liveStream", { title, youtubeUrl: url, isLive, enabled });
+      await patchAdmin("liveStream", {
+        title,
+        youtubeUrl: url,
+        isLive,
+        enabled,
+        upcomingTitle,
+        upcomingDate: upcomingDate ? new Date(upcomingDate).toISOString() : undefined,
+        upcomingDescription: upcomingDesc,
+      });
       toast("Live stream settings saved", "success");
     } catch {
       toast("Save failed", "error");
@@ -83,6 +97,18 @@ export default function AdminStreamPage() {
               <input type="checkbox" checked={isLive} onChange={(e) => setIsLive(e.target.checked)} className="h-4 w-4 accent-[#ED1C24]" />
               <span className="text-sm text-white">Show &quot;Live Now&quot; badge</span>
             </label>
+            <div>
+              <Label>Upcoming Match Title</Label>
+              <Input value={upcomingTitle} onChange={(e) => setUpcomingTitle(e.target.value)} />
+            </div>
+            <div>
+              <Label>Upcoming Date</Label>
+              <Input type="datetime-local" value={upcomingDate} onChange={(e) => setUpcomingDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Upcoming Description</Label>
+              <Input value={upcomingDesc} onChange={(e) => setUpcomingDesc(e.target.value)} />
+            </div>
             <Button onClick={save} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Save Stream Settings

@@ -45,6 +45,12 @@ export async function PATCH(req: NextRequest) {
         case "siteContent":
           next.siteContent = { ...s.siteContent, ...data };
           break;
+        case "tournaments":
+          next.tournaments = data;
+          break;
+        case "academy":
+          next.academy = { ...s.academy, ...data };
+          break;
         default:
           return s;
       }

@@ -6,8 +6,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     <input
       ref={ref}
       className={cn(
-        "w-full rounded-xl border border-white/10 bg-[#0b1219] px-4 py-3 text-white placeholder:text-slate-500",
-        "focus:border-[#F7931E]/50 focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20 transition-colors",
+        "w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--text)] placeholder:text-slate-400",
+        "focus:border-[var(--navy-light)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]/15 transition-colors",
         className
       )}
       {...props}
@@ -22,8 +22,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttrib
     <textarea
       ref={ref}
       className={cn(
-        "w-full rounded-xl border border-white/10 bg-[#0b1219] px-4 py-3 text-white placeholder:text-slate-500 resize-none",
-        "focus:border-[#F7931E]/50 focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20 transition-colors",
+        "w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--text)] placeholder:text-slate-400 resize-none",
+        "focus:border-[var(--navy-light)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]/15 transition-colors",
         className
       )}
       {...props}
@@ -43,7 +43,7 @@ export function Label({
   className?: string;
 }) {
   return (
-    <label htmlFor={htmlFor} className={cn("mb-1.5 block text-sm font-medium text-slate-300", className)}>
+    <label htmlFor={htmlFor} className={cn("mb-1.5 block text-sm font-semibold text-[var(--navy)]", className)}>
       {children}
     </label>
   );
@@ -57,8 +57,8 @@ export function Select({
   return (
     <select
       className={cn(
-        "w-full rounded-xl border border-white/10 bg-[#0b1219] px-4 py-3 text-white",
-        "focus:border-[#F7931E]/50 focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20",
+        "w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-[var(--text)]",
+        "focus:border-[var(--navy-light)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]/15",
         className
       )}
       {...props}

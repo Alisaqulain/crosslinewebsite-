@@ -22,7 +22,10 @@ export interface Booking {
   date: string;
   slotId: string;
   slotLabel: string;
-  playersOrTeam: string;
+  teamName: string;
+  numberOfPlayers: number;
+  /** @deprecated use teamName */
+  playersOrTeam?: string;
   matchType: MatchType;
   specialRequest?: string;
   totalAmount: number;
@@ -58,6 +61,32 @@ export interface LiveStream {
   isLive: boolean;
   enabled: boolean;
   scheduledAt?: string;
+  upcomingTitle?: string;
+  upcomingDate?: string;
+  upcomingDescription?: string;
+}
+
+export interface Tournament {
+  id: string;
+  title: string;
+  date: string;
+  description: string;
+  status: "upcoming" | "ongoing" | "completed";
+  registrationOpen: boolean;
+}
+
+export interface AcademyProgram {
+  id: string;
+  title: string;
+  description: string;
+  duration: string;
+  level: "beginner" | "intermediate" | "advanced" | "all";
+}
+
+export interface AcademyContent {
+  headline: string;
+  description: string;
+  programs: AcademyProgram[];
 }
 
 export interface LiveScore {
@@ -87,12 +116,10 @@ export interface GalleryItem {
 }
 
 export interface SiteContent {
-  heroHeadline: string;
-  heroSubheadline: string;
-  heroBadge: string;
-  stadiumHighlights: { title: string; description: string; icon: string }[];
-  testimonials: { name: string; role: string; text: string; rating: number }[];
-  homepageBanner?: string;
+  aboutTitle: string;
+  aboutDescription: string;
+  aboutPoints: string[];
+  testimonials: { name: string; role: string; text: string; rating: number; type?: "player" | "team" | "academy" }[];
 }
 
 export interface ContactMessage {
@@ -117,6 +144,8 @@ export interface AppStore {
   gallery: GalleryItem[];
   siteContent: SiteContent;
   contactMessages: ContactMessage[];
+  tournaments: Tournament[];
+  academy: AcademyContent;
 }
 
 export type GalleryImage = GalleryItem;

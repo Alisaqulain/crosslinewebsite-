@@ -17,8 +17,15 @@ async function ensureStore(): Promise<void> {
 export async function readStore(): Promise<AppStore> {
   await ensureStore();
   const raw = await fs.readFile(STORE_PATH, "utf-8");
-  const parsed = JSON.parse(raw) as AppStore;
-  return { ...defaultStore, ...parsed };
+  const parsed = JSON.parse(raw) as Partial<AppStore>;
+  return {
+    ...defaultStore,
+    ...parsed,
+    siteContent: { ...defaultStore.siteContent, ...parsed.siteContent },
+    liveStream: { ...defaultStore.liveStream, ...parsed.liveStream },
+    academy: { ...defaultStore.academy, ...parsed.academy },
+    tournaments: parsed.tournaments ?? defaultStore.tournaments,
+  };
 }
 
 export async function writeStore(store: AppStore): Promise<void> {

@@ -1,27 +1,23 @@
-import { BookingWizard } from "@/components/booking/BookingWizard";
+import { BookingSection } from "@/components/home/BookingSection";
 import { PageHero } from "@/components/media/PageHero";
 import { images } from "@/lib/media";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Book Your Cricket Slot",
-  description: "Book cricket ground slots online at Crossline Cricket Stadium. Pay advance and get email confirmation.",
+  title: "Ground Booking",
+  description: "Book your cricket ground slot at Crossline Cricket Stadium. Select date, session, and submit your team booking request.",
 };
 
 export default function BookingPage() {
   return (
     <div>
       <PageHero
-        badge="Online Booking"
-        title="Book Your Ground Slot"
-        description="Select date and time, pay advance, and receive email confirmation. Admin approval required."
+        badge="Ground Booking"
+        title="Book Your Cricket Slot"
+        description="Choose your session, enter team details, and reserve your match at Crossline."
         image={images.booking.hero}
       />
-      <section className="py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <BookingWizard />
-        </div>
-      </section>
+      <BookingSection />
     </div>
   );
 }

@@ -35,7 +35,7 @@ export function AdminHeader({ title }: { title: string }) {
 
 export function AdminShell({ children, title }: { children: React.ReactNode; title: string }) {
   return (
-    <div className="min-h-screen bg-[#0b1219]">
+    <div className="admin-theme min-h-screen bg-[#0b1219]">
       <AdminSidebar />
       <div className="lg:pl-64">
         <AdminHeader title={title} />

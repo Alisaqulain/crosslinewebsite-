@@ -28,7 +28,7 @@ export default function GalleryPage() {
         description="Photos from matches, events, and our world-class cricket facilities."
         image={images.gallery.hero}
       />
-      <section className="py-12">
+      <section className="py-12 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {loading ? (
             <div className="flex justify-center py-20">
@@ -44,9 +44,9 @@ export default function GalleryPage() {
                     onClick={() => setFilter(cat)}
                     className={cn(
                       "px-4 py-2 rounded-full text-sm font-medium transition-colors",
-                      filter === cat
-                        ? "bg-gradient-to-r from-[#ED1C24] to-[#F7931E] text-white"
-                        : "bg-white/5 text-slate-400 hover:bg-white/10"
+                  filter === cat
+                    ? "bg-[var(--navy)] text-white"
+                    : "bg-[var(--bg-alt)] text-[var(--text-muted)] hover:bg-[var(--bg-muted)]"
                     )}
                   >
                     {cat}

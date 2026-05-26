@@ -1,5 +1,4 @@
 import type { TimeSlot } from "./types";
-import { galleryMedia } from "./media";
 
 export const ADVANCE_PERCENTAGE = 25;
 
@@ -25,21 +24,38 @@ export const stadiumContacts = [
 
 export const primaryPhone = stadiumContacts[0];
 
-export const timeSlots: TimeSlot[] = [
-  { id: "morning", label: "Morning Session", start: "06:00", end: "10:00", price: 4500, available: true },
-  { id: "day", label: "Day Session", start: "10:00", end: "14:00", price: 5500, available: true },
-  { id: "afternoon", label: "Afternoon Session", start: "14:00", end: "18:00", price: 6000, available: true },
-  { id: "evening", label: "Evening Session", start: "18:00", end: "22:00", price: 7500, available: true },
-  { id: "night", label: "Night Session (Floodlights)", start: "22:00", end: "23:30", price: 9000, available: false },
-];
-
-export const galleryImages = galleryMedia;
-
 export const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/booking", label: "Book Slot" },
+  { href: "/about", label: "About Us" },
+  { href: "/booking", label: "Ground Booking" },
   { href: "/live", label: "Live Match" },
+  { href: "/live-score", label: "Live Score" },
+  { href: "/academy", label: "Sports Academy" },
+  { href: "/tournaments", label: "Tournaments" },
   { href: "/gallery", label: "Gallery" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-];
+  { href: "/contact", label: "Contact Us" },
+] as const;
+
+export const footerLinks = [
+  { href: "/about", label: "About Us" },
+  { href: "/booking", label: "Ground Booking" },
+  { href: "/live", label: "Live Match" },
+  { href: "/live-score", label: "Live Score" },
+  { href: "/academy", label: "Sports Academy" },
+  { href: "/tournaments", label: "Tournaments" },
+  { href: "/gallery", label: "Gallery" },
+  { href: "/contact", label: "Contact Us" },
+] as const;
+
+export const facilityItems = [
+  { icon: "ground", title: "Professional Cricket Ground", description: "Premium turf wicket and outfield for league matches and practice games." },
+  { icon: "nets", title: "Practice Nets", description: "Dedicated net lanes for academy sessions and team practice." },
+  { icon: "lights", title: "Flood Lights", description: "Stadium-grade floodlights for evening and night sessions." },
+  { icon: "seating", title: "Seating Area", description: "Comfortable viewing for families and tournament spectators." },
+  { icon: "parking", title: "Parking Area", description: "Spacious parking for players, teams, and guests." },
+  { icon: "changing", title: "Changing Rooms", description: "Clean changing rooms for teams before and after matches." },
+  { icon: "water", title: "Drinking Water", description: "Drinking water available across the ground." },
+  { icon: "washroom", title: "Washrooms", description: "Well-maintained washroom facilities on site." },
+  { icon: "scoreboard", title: "Live Scoreboard", description: "Digital scoreboard updated during matches." },
+  { icon: "tournament", title: "Tournament Setup", description: "Full tournament support — scheduling and match-day ops." },
+] as const;

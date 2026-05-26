@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
       date: body.date,
       slotId: body.slotId,
       slotLabel: slot.label,
-      playersOrTeam: body.playersOrTeam?.trim() ?? "",
+      teamName: body.teamName?.trim() ?? body.playersOrTeam?.trim() ?? "",
+      numberOfPlayers: Number(body.numberOfPlayers) || 0,
+      playersOrTeam: body.teamName?.trim() ?? body.playersOrTeam?.trim(),
       matchType: (body.matchType as MatchType) ?? "friendly",
       specialRequest: body.specialRequest?.trim(),
       totalAmount: total,
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
-    if (!booking.customerName || !booking.email || !booking.phone || !booking.address || !booking.date) {
+    if (!booking.customerName || !booking.email || !booking.phone || !booking.address || !booking.date || !booking.teamName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 

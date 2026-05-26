@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "navy";
   size?: "sm" | "md" | "lg";
 }
 
@@ -10,13 +10,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", children, ...props }, ref) => {
     const variants = {
       primary:
-        "bg-gradient-to-r from-[#ED1C24] via-[#F7931E] to-[#FBB03B] text-white shadow-lg shadow-[#ED1C24]/25 hover:shadow-[#ED1C24]/40 hover:brightness-110",
+        "bg-[var(--brand-red)] text-white shadow-lg shadow-[var(--brand-red)]/25 hover:bg-[var(--brand-red-hover)]",
       secondary:
-        "bg-[#39B54A] text-white shadow-lg shadow-[#39B54A]/25 hover:bg-[#2ea03d]",
+        "bg-[var(--cricket-green)] text-white shadow-lg shadow-[var(--cricket-green)]/25 hover:bg-[var(--cricket-green-light)]",
+      navy: "bg-[var(--navy)] text-white hover:bg-[var(--navy-mid)]",
       outline:
-        "border border-white/20 bg-transparent text-white hover:bg-white/5",
-      ghost: "bg-transparent text-white/80 hover:bg-white/5 hover:text-white",
-      danger: "bg-red-600/90 text-white hover:bg-red-600",
+        "border-2 border-[var(--navy)] bg-transparent text-[var(--navy)] hover:bg-[var(--navy)] hover:text-white",
+      ghost: "bg-transparent text-[var(--navy)] hover:bg-[var(--bg-alt)]",
+      danger: "bg-red-600 text-white hover:bg-red-700",
     };
 
     const sizes = {

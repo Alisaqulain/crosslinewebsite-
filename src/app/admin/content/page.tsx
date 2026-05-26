@@ -31,7 +31,7 @@ export default function AdminContentPage() {
     setSaving(true);
     try {
       await patchAdmin("siteContent", content);
-      toast("Website content saved", "success");
+      toast("About & testimonials saved", "success");
     } catch {
       toast("Save failed", "error");
     } finally {
@@ -51,15 +51,6 @@ export default function AdminContentPage() {
     }
   };
 
-  const addGalleryImage = () => {
-    if (!newImage.src || !newImage.alt) return;
-    setGallery([
-      { id: `G-${Date.now()}`, type: "image", src: newImage.src, alt: newImage.alt, category: newImage.category },
-      ...gallery,
-    ]);
-    setNewImage({ src: "", alt: "", category: "Stadium" });
-  };
-
   if (loading || !content) {
     return (
       <AdminShell title="Website Content">
@@ -71,25 +62,27 @@ export default function AdminContentPage() {
   }
 
   return (
-    <AdminShell title="Website Content Management">
+    <AdminShell title="Website Content">
       <div className="space-y-8 max-w-3xl">
         <Card className="space-y-4">
-          <h2 className="font-semibold text-white">Homepage Hero</h2>
+          <h2 className="font-semibold text-white">About Section</h2>
           <div>
-            <Label>Headline</Label>
-            <Input value={content.heroHeadline} onChange={(e) => setContent({ ...content, heroHeadline: e.target.value })} />
+            <Label>Title</Label>
+            <Input value={content.aboutTitle} onChange={(e) => setContent({ ...content, aboutTitle: e.target.value })} />
           </div>
           <div>
-            <Label>Subheadline</Label>
-            <Textarea rows={2} value={content.heroSubheadline} onChange={(e) => setContent({ ...content, heroSubheadline: e.target.value })} />
+            <Label>Description</Label>
+            <Textarea rows={3} value={content.aboutDescription} onChange={(e) => setContent({ ...content, aboutDescription: e.target.value })} />
           </div>
           <div>
-            <Label>Badge Text</Label>
-            <Input value={content.heroBadge} onChange={(e) => setContent({ ...content, heroBadge: e.target.value })} />
+            <Label>Bullet points (one per line)</Label>
+            <Textarea
+              rows={4}
+              value={content.aboutPoints.join("\n")}
+              onChange={(e) => setContent({ ...content, aboutPoints: e.target.value.split("\n").filter(Boolean) })}
+            />
           </div>
-          <Button onClick={saveContent} disabled={saving}>
-            <Save className="h-4 w-4" /> Save Homepage Content
-          </Button>
+          <Button onClick={saveContent} disabled={saving}><Save className="h-4 w-4" /> Save About</Button>
         </Card>
 
         <Card className="space-y-4">
@@ -117,28 +110,28 @@ export default function AdminContentPage() {
         </Card>
 
         <Card className="space-y-4">
-          <h2 className="font-semibold text-white">Gallery Images</h2>
+          <h2 className="font-semibold text-white">Gallery</h2>
           <div className="grid sm:grid-cols-3 gap-2">
             <Input placeholder="Image URL" value={newImage.src} onChange={(e) => setNewImage({ ...newImage, src: e.target.value })} />
-            <Input placeholder="Alt text" value={newImage.alt} onChange={(e) => setNewImage({ ...newImage, alt: e.target.value })} />
+            <Input placeholder="Alt" value={newImage.alt} onChange={(e) => setNewImage({ ...newImage, alt: e.target.value })} />
             <Input placeholder="Category" value={newImage.category} onChange={(e) => setNewImage({ ...newImage, category: e.target.value })} />
           </div>
-          <Button variant="outline" onClick={addGalleryImage}>
-            <Plus className="h-4 w-4" /> Add Image
+          <Button variant="outline" size="sm" onClick={() => {
+            if (!newImage.src || !newImage.alt) return;
+            setGallery([{ id: `G-${Date.now()}`, type: "image", ...newImage }, ...gallery]);
+            setNewImage({ src: "", alt: "", category: "Stadium" });
+          }}>
+            <Plus className="h-4 w-4" /> Add
           </Button>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {gallery.slice(0, 15).map((g) => (
-              <div key={g.id} className="flex justify-between items-center p-2 rounded-lg bg-[#0b1219] text-sm">
-                <span className="text-slate-300 truncate flex-1">{g.alt}</span>
-                <button type="button" onClick={() => setGallery(gallery.filter((x) => x.id !== g.id))} className="text-red-400 ml-2">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {gallery.slice(0, 20).map((g) => (
+              <div key={g.id} className="flex justify-between text-sm text-slate-300 p-2 bg-[#0b1219] rounded-lg">
+                <span className="truncate">{g.alt}</span>
+                <button type="button" onClick={() => setGallery(gallery.filter((x) => x.id !== g.id))} className="text-red-400"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
-          <Button onClick={saveGallery} disabled={saving}>
-            <Save className="h-4 w-4" /> Save Gallery ({gallery.length} items)
-          </Button>
+          <Button onClick={saveGallery} disabled={saving}><Save className="h-4 w-4" /> Save Gallery</Button>
         </Card>
       </div>
     </AdminShell>
