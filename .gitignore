@@ -33,8 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# runtime data
-/data/store.json
+# runtime logs (store.json is committed for Vercel deploy)
 /data/email-log.json
 
 # vercel

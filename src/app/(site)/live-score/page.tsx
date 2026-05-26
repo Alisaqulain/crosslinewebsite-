@@ -8,7 +8,7 @@ import { images } from "@/lib/media";
 export default function LiveScorePage() {
   const { data, loading } = usePublicData(true);
 
-  if (loading || !data) return <PageLoader />;
+  if (loading) return <PageLoader />;
 
   return (
     <div>

@@ -2,33 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchPublic } from "@/lib/api-client";
-import type { AppStore } from "@/lib/types";
-
-type PublicData = Pick<
-  AppStore,
-  | "slots"
-  | "blockedDates"
-  | "advancePercentage"
-  | "liveStream"
-  | "liveScore"
-  | "gallery"
-  | "siteContent"
-  | "tournaments"
-  | "academy"
-> & { allSlots?: AppStore["slots"] };
+import { getDefaultPublicData, type PublicDataPayload } from "@/lib/public-data";
 
 export function usePublicData(pollScore = false) {
-  const [data, setData] = useState<PublicData | null>(null);
+  const [data, setData] = useState<PublicDataPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const json = await fetchPublic();
+      const json = (await fetchPublic()) as PublicDataPayload;
       setData(json);
       setError(null);
     } catch {
-      setError("Failed to load data");
+      setError("Failed to load live data");
+      setData((prev) => prev ?? getDefaultPublicData());
     } finally {
       setLoading(false);
     }
@@ -41,5 +29,7 @@ export function usePublicData(pollScore = false) {
     return () => clearInterval(interval);
   }, [load, pollScore]);
 
-  return { data, loading, error, refresh: load };
+  const resolved = data ?? getDefaultPublicData();
+
+  return { data: resolved, loading, error, refresh: load };
 }

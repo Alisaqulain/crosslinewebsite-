@@ -13,7 +13,7 @@ import { Calendar, Trophy, Users } from "lucide-react";
 export default function TournamentsPage() {
   const { data, loading } = usePublicData();
 
-  if (loading || !data) return <PageLoader />;
+  if (loading) return <PageLoader />;
 
   const tournaments = data.tournaments;
 

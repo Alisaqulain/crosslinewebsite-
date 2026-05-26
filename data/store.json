@@ -1,0 +1,255 @@
+{
+  "advancePercentage": 25,
+  "blockedDates": [
+    "2026-05-30",
+    "2026-06-01"
+  ],
+  "slots": [
+    {
+      "id": "morning",
+      "label": "Morning Session",
+      "start": "06:00",
+      "end": "10:00",
+      "price": 4500,
+      "available": true
+    },
+    {
+      "id": "day",
+      "label": "Day Session",
+      "start": "10:00",
+      "end": "14:00",
+      "price": 5500,
+      "available": true
+    },
+    {
+      "id": "afternoon",
+      "label": "Afternoon Session",
+      "start": "14:00",
+      "end": "18:00",
+      "price": 6000,
+      "available": true
+    },
+    {
+      "id": "evening",
+      "label": "Evening Session",
+      "start": "18:00",
+      "end": "22:00",
+      "price": 7500,
+      "available": true
+    },
+    {
+      "id": "night",
+      "label": "Night Session (Floodlights)",
+      "start": "22:00",
+      "end": "23:30",
+      "price": 9000,
+      "available": false
+    }
+  ],
+  "bookings": [],
+  "ballPurchases": [
+    {
+      "id": "BP1",
+      "supplier": "Sports Gear India",
+      "ballType": "Kookaburra Red",
+      "quantity": 24,
+      "purchasePrice": 4800,
+      "date": "2026-05-20",
+      "notes": "Season stock"
+    },
+    {
+      "id": "BP2",
+      "supplier": "Local Sports Mart",
+      "ballType": "SG White",
+      "quantity": 20,
+      "purchasePrice": 3200,
+      "date": "2026-05-18"
+    }
+  ],
+  "ballUsage": [
+    {
+      "id": "BU1",
+      "ballType": "Kookaburra Red",
+      "quantity": 12,
+      "date": "2026-05-22",
+      "notes": "Weekend matches"
+    },
+    {
+      "id": "BU2",
+      "ballType": "Tennis Ball (Practice)",
+      "quantity": 30,
+      "date": "2026-05-25",
+      "notes": "Academy sessions"
+    }
+  ],
+  "liveStream": {
+    "id": "1",
+    "title": "Crossline Premier League — Live",
+    "youtubeUrl": "https://www.youtube.com/embed/tpph2AECuVY",
+    "isLive": true,
+    "enabled": true,
+    "scheduledAt": "2026-05-26T18:00:00"
+  },
+  "liveScore": {
+    "teamA": "Crossline XI",
+    "teamB": "Sandhawali Warriors",
+    "battingTeam": "A",
+    "runs": 142,
+    "wickets": 3,
+    "overs": 18,
+    "balls": 4,
+    "batsman1": "Rahul Sharma",
+    "batsman2": "Amit Patel",
+    "bowler": "Vikram Singh",
+    "target": 186,
+    "matchStatus": "live",
+    "recentBalls": [
+      "1",
+      "4",
+      "0",
+      "6",
+      "W",
+      "2",
+      "1",
+      "4"
+    ],
+    "updatedAt": "2026-05-26T19:47:28.990Z"
+  },
+  "gallery": [
+    {
+      "id": "g1",
+      "type": "image",
+      "src": "https://images.unsplash.com/photo-1774600551775-747997267949?w=800&q=80&auto=format&fit=crop",
+      "alt": "Stadium aerial view",
+      "category": "Stadium"
+    },
+    {
+      "id": "g2",
+      "type": "image",
+      "src": "https://images.unsplash.com/photo-1774168062260-b0a1b63026ba?w=800&q=80&auto=format&fit=crop",
+      "alt": "Cricket match action",
+      "category": "Matches"
+    },
+    {
+      "id": "g3",
+      "type": "image",
+      "src": "https://images.unsplash.com/photo-1771909712681-314d5b0ad6e5?w=800&q=80&auto=format&fit=crop",
+      "alt": "Evening floodlights",
+      "category": "Stadium"
+    },
+    {
+      "id": "g4",
+      "type": "image",
+      "src": "https://images.unsplash.com/photo-1593341646782-e0b495cff86d?w=800&q=80&auto=format&fit=crop",
+      "alt": "Practice nets",
+      "category": "Facilities"
+    },
+    {
+      "id": "g5",
+      "type": "image",
+      "src": "https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "alt": "Team celebration",
+      "category": "Events"
+    },
+    {
+      "id": "g6",
+      "type": "image",
+      "src": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80&auto=format&fit=crop",
+      "alt": "Pitch close-up",
+      "category": "Stadium"
+    },
+    {
+      "id": "g7",
+      "type": "image",
+      "src": "https://images.pexels.com/photos/11455409/pexels-photo-11455409.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "alt": "Batsman at crease",
+      "category": "Matches"
+    },
+    {
+      "id": "g8",
+      "type": "image",
+      "src": "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=800&q=80&auto=format&fit=crop",
+      "alt": "Cricket equipment",
+      "category": "Facilities"
+    },
+    {
+      "id": "g9",
+      "type": "image",
+      "src": "https://images.unsplash.com/photo-1774167766011-004b8acb8e3b?w=800&q=80&auto=format&fit=crop",
+      "alt": "Ground panorama",
+      "category": "Stadium"
+    },
+    {
+      "id": "v1",
+      "type": "video",
+      "src": "https://www.youtube.com/embed/wR7F-ttieto",
+      "poster": "https://images.unsplash.com/photo-1774168062260-b0a1b63026ba?w=800&q=80&auto=format&fit=crop",
+      "alt": "Cricket batting highlights",
+      "category": "Videos"
+    },
+    {
+      "id": "v2",
+      "type": "video",
+      "src": "https://www.youtube.com/embed/1Ee7hDqXxwY",
+      "poster": "https://images.unsplash.com/photo-1774600551775-747997267949?w=800&q=80&auto=format&fit=crop",
+      "alt": "Stadium drone view",
+      "category": "Videos"
+    },
+    {
+      "id": "v3",
+      "type": "video",
+      "src": "https://www.youtube.com/embed/Z5-RoiX9644",
+      "poster": "https://images.unsplash.com/photo-1771909712681-314d5b0ad6e5?w=800&q=80&auto=format&fit=crop",
+      "alt": "Match day atmosphere",
+      "category": "Videos"
+    }
+  ],
+  "siteContent": {
+    "heroHeadline": "Book Your Cricket Slot Online",
+    "heroSubheadline": "Premium cricket ground in Muzaffarnagar. Book sessions online, pay advance securely, and play under floodlights.",
+    "heroBadge": "crosslinecricketstadium.in",
+    "stadiumHighlights": [
+      {
+        "title": "Premium Turf",
+        "description": "Well-maintained cricket pitch with professional-grade outfield.",
+        "icon": "turf"
+      },
+      {
+        "title": "Floodlit Nights",
+        "description": "Play till 11 PM with stadium-grade floodlighting.",
+        "icon": "lights"
+      },
+      {
+        "title": "Practice Nets",
+        "description": "Dedicated nets for academy and team practice.",
+        "icon": "nets"
+      },
+      {
+        "title": "Parking & Amenities",
+        "description": "Spacious parking, changing rooms, and refreshment area.",
+        "icon": "amenities"
+      }
+    ],
+    "testimonials": [
+      {
+        "name": "Rahul Sharma",
+        "role": "Local League Captain",
+        "text": "Best ground in Muzaffarnagar. Online booking is smooth and the pitch quality is excellent.",
+        "rating": 5
+      },
+      {
+        "name": "Priya Patel",
+        "role": "Corporate Event Organizer",
+        "text": "We hosted our annual corporate cup here. Professional staff and seamless advance payment process.",
+        "rating": 5
+      },
+      {
+        "name": "Amit Singh",
+        "role": "Academy Coach",
+        "text": "Our academy trains here weekly. Floodlit evening slots are a game-changer for young players.",
+        "rating": 5
+      }
+    ]
+  },
+  "contactMessages": []
+}

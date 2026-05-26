@@ -21,7 +21,7 @@ const highlights = [
 export default function AboutPage() {
   const { data, loading } = usePublicData();
 
-  if (loading || !data) return <PageLoader />;
+  if (loading) return <PageLoader />;
 
   return (
     <div>

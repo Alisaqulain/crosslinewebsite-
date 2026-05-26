@@ -16,7 +16,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 export default function HomePage() {
   const { data, loading } = usePublicData(true);
 
-  if (loading || !data) return <PageLoader />;
+  if (loading) return <PageLoader />;
 
   return (
     <>

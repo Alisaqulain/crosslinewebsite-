@@ -18,7 +18,7 @@ const benefits = [
 export default function AcademyPage() {
   const { data, loading } = usePublicData();
 
-  if (loading || !data) return <PageLoader />;
+  if (loading) return <PageLoader />;
   const { academy } = data;
 
   return (
