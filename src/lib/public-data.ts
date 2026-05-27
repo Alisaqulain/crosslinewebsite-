@@ -1,31 +1,25 @@
 import type { AppStore } from "./types";
 import { defaultStore } from "./seed";
+import { getSlotsForDate } from "./slots";
 
 export type PublicDataPayload = Pick<
   AppStore,
-  | "slots"
-  | "blockedDates"
-  | "advancePercentage"
-  | "liveStream"
-  | "liveScore"
-  | "gallery"
-  | "siteContent"
-  | "tournaments"
-  | "academy"
-> & { allSlots: AppStore["slots"] };
+  "blockedDates" | "gallery" | "siteContent" | "tournaments" | "academy" | "matches"
+> & {
+  slots: AppStore["slots"];
+};
 
-export function toPublicPayload(store: AppStore): PublicDataPayload {
+export function toPublicPayload(store: AppStore, date?: string): PublicDataPayload {
+  const slots = date ? getSlotsForDate(store, date) : store.slots.filter((s) => s.available);
+
   return {
-    slots: store.slots.filter((s) => s.available),
-    allSlots: store.slots,
+    slots,
     blockedDates: store.blockedDates,
-    advancePercentage: store.advancePercentage,
-    liveStream: store.liveStream,
-    liveScore: store.liveScore,
     gallery: store.gallery,
     siteContent: store.siteContent,
     tournaments: store.tournaments,
     academy: store.academy,
+    matches: store.matches.filter((m) => m.status === "upcoming"),
   };
 }
 

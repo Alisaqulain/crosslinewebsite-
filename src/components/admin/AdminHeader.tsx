@@ -14,7 +14,7 @@ export function AdminHeader({ title }: { title: string }) {
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
           <div className="relative w-64 h-full">
-            <AdminSidebar />
+            <AdminSidebar className="flex" />
           </div>
         </div>
       )}

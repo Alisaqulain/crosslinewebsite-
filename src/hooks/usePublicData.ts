@@ -4,30 +4,28 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchPublic } from "@/lib/api-client";
 import { getDefaultPublicData, type PublicDataPayload } from "@/lib/public-data";
 
-export function usePublicData(pollScore = false) {
+export function usePublicData(bookingDate?: string) {
   const [data, setData] = useState<PublicDataPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const json = (await fetchPublic()) as PublicDataPayload;
+      const json = (await fetchPublic(bookingDate)) as PublicDataPayload;
       setData(json);
       setError(null);
     } catch {
-      setError("Failed to load live data");
+      setError("Failed to load data");
       setData((prev) => prev ?? getDefaultPublicData());
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [bookingDate]);
 
   useEffect(() => {
+    setLoading(true);
     load();
-    if (!pollScore) return;
-    const interval = setInterval(load, 8000);
-    return () => clearInterval(interval);
-  }, [load, pollScore]);
+  }, [load]);
 
   const resolved = data ?? getDefaultPublicData();
 

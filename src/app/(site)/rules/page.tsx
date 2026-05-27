@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { images } from "@/lib/media";
 import { PageHero } from "@/components/media/PageHero";
 import { MediaImage } from "@/components/media/MediaImage";
-import { Shield, Clock, CreditCard, Users, Ban, AlertTriangle } from "lucide-react";
+import { Shield, Clock, Users, Ban, AlertTriangle, CheckCircle } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -16,19 +16,20 @@ const policies = [
     image: images.rules.booking,
     items: [
       "All bookings require admin approval after online submission.",
-      "Advance payment (25%) is non-refundable if cancelled within 24 hours of slot.",
+      "You will receive email confirmation once your booking is approved.",
       "Arrive 15 minutes before your session start time.",
       "Late arrivals may forfeit unused time without refund.",
     ],
   },
   {
-    icon: CreditCard,
-    title: "Payment Policy",
-    image: images.rules.payment,
+    icon: CheckCircle,
+    title: "Booking Requests",
+    image: images.rules.booking,
     items: [
-      "Advance percentage is set by stadium administration (typically 20–30%).",
-      "Remaining balance must be paid at the stadium before play begins.",
-      "Accepted methods at stadium: cash, UPI, and card.",
+      "Submit your booking request online with team and slot details.",
+      "Pending requests do not guarantee the slot until approved.",
+      "If rejected, the slot becomes available again for other teams.",
+      "Payment is arranged directly at the stadium after approval.",
     ],
   },
   {
@@ -65,9 +66,9 @@ const policies = [
     title: "Cancellation",
     image: images.rules.cancellation,
     items: [
-      "Free rescheduling if cancelled 48+ hours before slot.",
-      "50% advance forfeited for cancellations within 24–48 hours.",
-      "No refund for same-day cancellations.",
+      "Contact the stadium to reschedule approved bookings.",
+      "Cancellations should be made as early as possible.",
+      "Repeated no-shows may affect future booking approvals.",
     ],
   },
 ];

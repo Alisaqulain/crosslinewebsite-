@@ -7,14 +7,14 @@ import {
   Calendar,
   Clock,
   Package,
-  CreditCard,
-  Radio,
   Trophy,
   BarChart3,
   FileText,
-  Medal,
-  GraduationCap,
+  Image,
+  Fuel,
   LogOut,
+  GraduationCap,
+  Medal,
 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { cn } from "@/lib/utils";
@@ -22,28 +22,35 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
-  { href: "/admin/slots", label: "Slots & Pricing", icon: Clock },
+  { href: "/admin/slots", label: "Slot Management", icon: Clock },
+  { href: "/admin/matches", label: "Match Management", icon: Trophy },
+  { href: "/admin/diesel", label: "Diesel Expenses", icon: Fuel },
   { href: "/admin/inventory", label: "Ball Stock", icon: Package },
-  { href: "/admin/scoring", label: "Live Scoring", icon: Trophy },
-  { href: "/admin/stream", label: "Live Video", icon: Radio },
-  { href: "/admin/payments", label: "Reports", icon: BarChart3 },
+  { href: "/admin/finance", label: "Income & Expense", icon: BarChart3 },
+  { href: "/admin/gallery", label: "Gallery", icon: Image },
   { href: "/admin/content", label: "Website Content", icon: FileText },
   { href: "/admin/tournaments", label: "Tournaments", icon: Medal },
   { href: "/admin/academy", label: "Academy", icon: GraduationCap },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-full w-64 border-r border-white/8 bg-[#070d12] hidden lg:flex flex-col">
+    <aside
+      className={cn(
+        "fixed left-0 top-0 z-40 h-full w-64 border-r border-white/8 bg-[#070d12] flex flex-col",
+        className ?? "hidden lg:flex"
+      )}
+    >
       <div className="p-5 border-b border-white/8">
         <Logo light />
         <p className="mt-2 text-xs text-slate-500">Admin Panel</p>
       </div>
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {links.map((link) => {
-          const active = pathname === link.href || (link.href !== "/admin" && pathname.startsWith(link.href));
+          const active =
+            pathname === link.href || (link.href !== "/admin" && pathname.startsWith(link.href));
           return (
             <Link
               key={link.href}
@@ -64,7 +71,10 @@ export function AdminSidebar() {
       <div className="p-3 border-t border-white/8">
         <Link
           href="/admin/login"
-          onClick={() => sessionStorage.removeItem("crossline_admin")}
+          onClick={() => {
+            sessionStorage.removeItem("crossline_admin");
+            sessionStorage.removeItem("crossline_admin_token");
+          }}
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
         >
           <LogOut className="h-4 w-4" />

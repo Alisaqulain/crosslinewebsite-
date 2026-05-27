@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, updateStore } from "@/lib/db";
 import { isAdminRequest, unauthorized } from "@/lib/auth";
+import { getFinanceSummary } from "@/lib/finance";
 import type { AppStore } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   if (!isAdminRequest(req)) return unauthorized();
   const store = await readStore();
-  return NextResponse.json({ store });
+  const summary = req.nextUrl.searchParams.get("summary");
+  if (summary === "finance") {
+    return NextResponse.json({ finance: getFinanceSummary(store) });
+  }
+  return NextResponse.json({ store, finance: getFinanceSummary(store) });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -24,20 +29,20 @@ export async function PATCH(req: NextRequest) {
         case "blockedDates":
           next.blockedDates = data;
           break;
-        case "advancePercentage":
-          next.advancePercentage = data;
-          break;
-        case "liveStream":
-          next.liveStream = { ...s.liveStream, ...data };
-          break;
-        case "liveScore":
-          next.liveScore = { ...s.liveScore, ...data, updatedAt: new Date().toISOString() };
-          break;
         case "ballPurchases":
           next.ballPurchases = data;
           break;
         case "ballUsage":
           next.ballUsage = data;
+          break;
+        case "matches":
+          next.matches = data;
+          break;
+        case "dieselExpenses":
+          next.dieselExpenses = data;
+          break;
+        case "financeEntries":
+          next.financeEntries = data;
           break;
         case "gallery":
           next.gallery = data;
@@ -57,7 +62,7 @@ export async function PATCH(req: NextRequest) {
       return next;
     });
 
-    return NextResponse.json({ store });
+    return NextResponse.json({ store, finance: getFinanceSummary(store) });
   } catch {
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }

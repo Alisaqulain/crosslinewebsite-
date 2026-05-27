@@ -110,7 +110,29 @@ export default function AdminContentPage() {
         </Card>
 
         <Card className="space-y-4">
+          <h2 className="font-semibold text-white">Contact Details</h2>
+          <div>
+            <Label>Email</Label>
+            <Input value={content.contactEmail} onChange={(e) => setContent({ ...content, contactEmail: e.target.value })} />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <Input value={content.contactPhone} onChange={(e) => setContent({ ...content, contactPhone: e.target.value })} />
+          </div>
+          <div>
+            <Label>Address</Label>
+            <Textarea rows={2} value={content.contactAddress} onChange={(e) => setContent({ ...content, contactAddress: e.target.value })} />
+          </div>
+          <div>
+            <Label>Hours</Label>
+            <Input value={content.contactHours} onChange={(e) => setContent({ ...content, contactHours: e.target.value })} />
+          </div>
+          <Button onClick={saveContent} disabled={saving}><Save className="h-4 w-4" /> Save Contact</Button>
+        </Card>
+
+        <Card className="space-y-4">
           <h2 className="font-semibold text-white">Gallery</h2>
+          <p className="text-xs text-slate-500">For full gallery management, use the Gallery module.</p>
           <div className="grid sm:grid-cols-3 gap-2">
             <Input placeholder="Image URL" value={newImage.src} onChange={(e) => setNewImage({ ...newImage, src: e.target.value })} />
             <Input placeholder="Alt" value={newImage.alt} onChange={(e) => setNewImage({ ...newImage, alt: e.target.value })} />

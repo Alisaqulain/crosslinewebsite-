@@ -8,8 +8,9 @@ export function adminHeaders(): HeadersInit {
   return { "Content-Type": "application/json", "x-admin-token": ADMIN_TOKEN };
 }
 
-export async function fetchPublic() {
-  const res = await fetch("/api/public", { cache: "no-store" });
+export async function fetchPublic(date?: string) {
+  const q = date ? `?date=${encodeURIComponent(date)}` : "";
+  const res = await fetch(`/api/public${q}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to load data");
   return res.json();
 }

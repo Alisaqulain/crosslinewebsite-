@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: "%s | Crossline Cricket Stadium",
   },
   description:
-    "Book your cricket slot online at crosslinecricketstadium.in — premium ground booking, live scoring, and match streaming at Crossline Cricket Stadium, Muzaffarnagar.",
+    "Book your cricket slot online at crosslinecricketstadium.in — premium ground booking, sports academy, and tournaments at Crossline Cricket Stadium, Muzaffarnagar.",
   metadataBase: new URL("https://crosslinecricketstadium.in"),
   icons: {
     icon: "/crossline-logo.png",

@@ -3,24 +3,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Calendar, Play, Target, Trophy, GraduationCap, Radio } from "lucide-react";
+import { Calendar, Target, Trophy, GraduationCap, Phone } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { localMedia, videos } from "@/lib/media";
 import { BackgroundVideo } from "@/components/media/BackgroundVideo";
-import type { LiveScore } from "@/lib/types";
 
 const stats = [
   { icon: Target, label: "Professional Ground" },
-  { icon: Radio, label: "Live Score" },
   { icon: GraduationCap, label: "Academy Training" },
   { icon: Trophy, label: "Tournament Ready" },
+  { icon: Calendar, label: "Easy Booking" },
 ];
 
-export function Hero({ liveScore }: { liveScore?: LiveScore }) {
-  const miniScore = liveScore
-    ? `${liveScore.teamA} vs ${liveScore.teamB}`
-    : "Crossline XI vs Visitors";
-
+export function Hero() {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden floodlight-glow">
       <BackgroundVideo src={videos.heroBackground} overlay="custom" />
@@ -34,7 +29,7 @@ export function Hero({ liveScore }: { liveScore?: LiveScore }) {
       <div className="relative mx-auto max-w-7xl px-4 py-32 sm:px-6 lg:px-8 w-full">
         <div className="grid lg:grid-cols-12 gap-10 items-center">
           <motion.div
-            className="lg:col-span-7"
+            className="lg:col-span-8"
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
@@ -56,7 +51,7 @@ export function Hero({ liveScore }: { liveScore?: LiveScore }) {
               </span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-slate-200 max-w-xl leading-relaxed">
-              Book your ground, train like a pro, watch live matches, and host tournaments at Crossline.
+              Book your ground, train like a pro, and host unforgettable cricket tournaments at Muzaffarnagar&apos;s premium stadium.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link href="/booking">
@@ -65,50 +60,47 @@ export function Hero({ liveScore }: { liveScore?: LiveScore }) {
                   Book Ground
                 </Button>
               </Link>
-              <Link href="/live">
+              <Link href="/contact">
                 <Button
                   size="lg"
                   variant="outline"
-                  className="!border-2 !border-white/40 !text-white hover:!bg-white/10 min-w-[180px]"
+                  className="!border-2 !border-white/40 !text-white hover:!bg-white/10 min-w-[160px]"
                 >
-                  <Play className="h-5 w-5" />
-                  Watch Live Match
+                  <Phone className="h-5 w-5" />
+                  Contact Us
                 </Button>
               </Link>
             </div>
           </motion.div>
 
           <motion.div
-            className="lg:col-span-5 space-y-4"
+            className="lg:col-span-4 hidden lg:block"
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
           >
-            <div className="glass-card rounded-2xl p-4 float-slow">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--cricket-green-light)]">
-                  Live Match
-                </span>
-                {liveScore?.matchStatus === "live" && (
-                  <span className="live-pulse flex items-center gap-1 rounded-full bg-[var(--brand-red)] px-2 py-0.5 text-[10px] font-bold text-white">
-                    LIVE
-                  </span>
-                )}
-              </div>
-              <p className="font-[family-name:var(--font-sora)] text-lg font-bold text-white">{miniScore}</p>
-              {liveScore && (
-                <p className="text-sm text-slate-300 mt-1 tabular-nums">
-                  {liveScore.runs}/{liveScore.wickets} · {liveScore.overs}.{liveScore.balls} ov
-                </p>
-              )}
-              <Link href="/live-score" className="mt-3 inline-block text-xs font-semibold text-[var(--cricket-green-light)] hover:text-white">
-                Full scoreboard →
-              </Link>
-            </div>
-
-            <div className="hidden lg:block relative h-48 w-48 mx-auto opacity-90">
-              <div className="absolute inset-0 rounded-full border-2 border-dashed border-white/15 animate-[spin_30s_linear_infinite]" />
-              <div className="absolute inset-4 rounded-full bg-white/5 backdrop-blur-sm" />
+            <div className="glass-card rounded-2xl p-6 border-l-4 border-[var(--cricket-green-light)]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--cricket-green-light)] mb-3">
+                Stadium Facilities
+              </p>
+              <ul className="space-y-3 text-sm text-slate-200">
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-red)]" />
+                  Professional turf wicket
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-red)]" />
+                  Floodlights for night cricket
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-red)]" />
+                  Practice nets &amp; academy
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-red)]" />
+                  Tournament-ready venue
+                </li>
+              </ul>
             </div>
           </motion.div>
         </div>

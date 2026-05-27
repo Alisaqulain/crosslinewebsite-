@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readStore, updateStore, generateId } from "@/lib/db";
 import { isAdminRequest, unauthorized } from "@/lib/auth";
 import { sendEmail, bookingReceivedEmail } from "@/lib/email";
+import { hasApprovedBooking, isSlotAvailableForUser } from "@/lib/slots";
 import type { Booking, MatchType } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
@@ -23,16 +24,18 @@ export async function POST(req: NextRequest) {
     const store = await readStore();
 
     const slot = store.slots.find((s) => s.id === body.slotId);
-    if (!slot || !slot.available) {
-      return NextResponse.json({ error: "Selected slot is not available" }, { status: 400 });
+    if (!slot) {
+      return NextResponse.json({ error: "Selected slot not found" }, { status: 400 });
     }
     if (store.blockedDates.includes(body.date)) {
       return NextResponse.json({ error: "Selected date is blocked" }, { status: 400 });
     }
-
-    const pct = slot.advancePercentage ?? store.advancePercentage;
-    const total = slot.price;
-    const advancePaid = Math.round((total * pct) / 100);
+    if (!isSlotAvailableForUser(slot, body.date, store.bookings)) {
+      return NextResponse.json({ error: "Selected slot is not available" }, { status: 400 });
+    }
+    if (hasApprovedBooking(store.bookings, body.slotId, body.date)) {
+      return NextResponse.json({ error: "This slot is already booked" }, { status: 400 });
+    }
 
     const booking: Booking = {
       id: generateId("BK"),
@@ -43,20 +46,23 @@ export async function POST(req: NextRequest) {
       date: body.date,
       slotId: body.slotId,
       slotLabel: slot.label,
-      teamName: body.teamName?.trim() ?? body.playersOrTeam?.trim() ?? "",
+      slotPrice: slot.price,
+      teamName: body.teamName?.trim() ?? "",
       numberOfPlayers: Number(body.numberOfPlayers) || 0,
-      playersOrTeam: body.teamName?.trim() ?? body.playersOrTeam?.trim(),
       matchType: (body.matchType as MatchType) ?? "friendly",
       specialRequest: body.specialRequest?.trim(),
-      totalAmount: total,
-      advancePaid,
-      advancePercentage: pct,
-      paymentStatus: body.paymentStatus === "paid" ? "paid" : "pending",
       status: "pending",
       createdAt: new Date().toISOString(),
     };
 
-    if (!booking.customerName || !booking.email || !booking.phone || !booking.address || !booking.date || !booking.teamName) {
+    if (
+      !booking.customerName ||
+      !booking.email ||
+      !booking.phone ||
+      !booking.address ||
+      !booking.date ||
+      !booking.teamName
+    ) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
