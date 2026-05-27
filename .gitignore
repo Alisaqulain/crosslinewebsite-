@@ -36,8 +36,7 @@ yarn-error.log*
 # runtime logs (store.json is committed for Vercel deploy)
 /data/email-log.json
 
-# vercel
-.vercel
+/public/uploads/*
 
 # typescript
 *.tsbuildinfo

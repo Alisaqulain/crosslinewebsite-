@@ -7,6 +7,39 @@ export function adminHeaders(): HeadersInit {
   return { "Content-Type": "application/json" };
 }
 
+export function adminAuthHeaders(): HeadersInit {
+  if (typeof window !== "undefined") {
+    const token = sessionStorage.getItem("crossline_admin_token");
+    if (!token) throw new Error("Not authenticated");
+    return { "x-admin-token": token };
+  }
+  return {};
+}
+
+export async function uploadAdminImage(file: File): Promise<{ url: string; filename: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/admin/upload", {
+    method: "POST",
+    headers: adminAuthHeaders(),
+    body: formData,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Upload failed");
+  return json;
+}
+
+export async function deleteAdminImage(src: string): Promise<void> {
+  const res = await fetch(`/api/admin/upload?src=${encodeURIComponent(src)}`, {
+    method: "DELETE",
+    headers: adminAuthHeaders(),
+  });
+  if (!res.ok) {
+    const json = await res.json();
+    throw new Error(json.error ?? "Delete failed");
+  }
+}
+
 export async function fetchPublic(date?: string) {
   const q = date ? `?date=${encodeURIComponent(date)}` : "";
   const res = await fetch(`/api/public${q}`, { cache: "no-store" });

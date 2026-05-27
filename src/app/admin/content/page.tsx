@@ -7,21 +7,18 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
-import type { GalleryItem, SiteContent } from "@/lib/types";
-import { Loader2, Save, Plus, Trash2 } from "lucide-react";
+import type { SiteContent } from "@/lib/types";
+import { Loader2, Save } from "lucide-react";
 
 export default function AdminContentPage() {
   const { toast } = useToast();
   const [content, setContent] = useState<SiteContent | null>(null);
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newImage, setNewImage] = useState({ src: "", alt: "", category: "Stadium" });
 
   useEffect(() => {
     fetchAdminStore().then(({ store }) => {
       setContent(store.siteContent);
-      setGallery(store.gallery);
       setLoading(false);
     });
   }, []);
@@ -32,18 +29,6 @@ export default function AdminContentPage() {
     try {
       await patchAdmin("siteContent", content);
       toast("About & testimonials saved", "success");
-    } catch {
-      toast("Save failed", "error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveGallery = async () => {
-    setSaving(true);
-    try {
-      await patchAdmin("gallery", gallery);
-      toast("Gallery saved", "success");
     } catch {
       toast("Save failed", "error");
     } finally {
@@ -132,28 +117,13 @@ export default function AdminContentPage() {
 
         <Card className="space-y-4">
           <h2 className="font-semibold text-[var(--navy)]">Gallery</h2>
-          <p className="text-xs text-slate-500">For full gallery management, use the Gallery module.</p>
-          <div className="grid sm:grid-cols-3 gap-2">
-            <Input placeholder="Image URL" value={newImage.src} onChange={(e) => setNewImage({ ...newImage, src: e.target.value })} />
-            <Input placeholder="Alt" value={newImage.alt} onChange={(e) => setNewImage({ ...newImage, alt: e.target.value })} />
-            <Input placeholder="Category" value={newImage.category} onChange={(e) => setNewImage({ ...newImage, category: e.target.value })} />
-          </div>
-          <Button variant="outline" size="sm" onClick={() => {
-            if (!newImage.src || !newImage.alt) return;
-            setGallery([{ id: `G-${Date.now()}`, type: "image", ...newImage }, ...gallery]);
-            setNewImage({ src: "", alt: "", category: "Stadium" });
-          }}>
-            <Plus className="h-4 w-4" /> Add
-          </Button>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {gallery.slice(0, 20).map((g) => (
-              <div key={g.id} className="flex justify-between text-sm text-[var(--text-muted)] p-2 admin-subtle rounded-lg">
-                <span className="truncate">{g.alt}</span>
-                <button type="button" onClick={() => setGallery(gallery.filter((x) => x.id !== g.id))} className="text-red-400"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            ))}
-          </div>
-          <Button onClick={saveGallery} disabled={saving}><Save className="h-4 w-4" /> Save Gallery</Button>
+          <p className="text-sm text-[var(--text-muted)]">
+            Upload and manage images from the{" "}
+            <a href="/admin/gallery" className="font-semibold text-[var(--brand-red)] hover:underline">
+              Gallery module
+            </a>
+            .
+          </p>
         </Card>
       </div>
     </AdminShell>
