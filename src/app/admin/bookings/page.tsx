@@ -62,8 +62,10 @@ export default function AdminBookingsPage() {
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-full text-sm font-medium capitalize min-h-[44px] ${
-                filter === f ? "bg-[#F7931E]/20 text-[#FBB03B]" : "bg-white/5 text-slate-400"
+              className={`px-4 py-2 rounded-full text-sm font-semibold capitalize min-h-[44px] transition-colors ${
+                filter === f
+                  ? "admin-filter-active bg-[var(--brand-red)]/10 text-[var(--brand-red)] border border-[var(--brand-red)]/20"
+                  : "admin-filter bg-white text-[var(--text-muted)] border border-[var(--border)] hover:text-[var(--navy)]"
               }`}
             >
               {f}
@@ -95,16 +97,16 @@ export default function AdminBookingsPage() {
               {
                 key: "id",
                 header: "ID",
-                render: (b) => <span className="text-slate-300">{b.id}</span>,
+                render: (b) => <span className="text-[var(--text-muted)]">{b.id}</span>,
               },
               {
                 key: "customer",
                 header: "Customer",
                 render: (b) => (
                   <div>
-                    <p className="text-white font-medium">{b.customerName}</p>
-                    <p className="text-xs text-slate-500">{b.email}</p>
-                    <p className="text-xs text-slate-500">{b.phone}</p>
+                    <p className="font-semibold text-[var(--navy)]">{b.customerName}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{b.email}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{b.phone}</p>
                   </div>
                 ),
               },
@@ -138,7 +140,7 @@ export default function AdminBookingsPage() {
               {
                 key: "status",
                 header: "Status",
-                render: (b) => <Badge status={b.status} />,
+                render: (b) => <Badge status={b.status} theme="light" />,
               },
               {
                 key: "actions",

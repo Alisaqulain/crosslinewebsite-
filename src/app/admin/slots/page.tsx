@@ -211,7 +211,7 @@ export default function AdminSlotsPage() {
       </div>
 
       <Card>
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-[var(--navy)] mb-4 flex items-center gap-2">
           <Ban className="h-5 w-5 text-[#ED1C24]" />
           Blocked Dates
         </h2>
@@ -231,8 +231,8 @@ export default function AdminSlotsPage() {
         </div>
         <div className="space-y-2">
           {blocked.map((d) => (
-            <div key={d} className="flex justify-between items-center p-3 rounded-xl bg-[#1a2736]">
-              <span className="text-white">{d}</span>
+            <div key={d} className="flex justify-between items-center p-3 rounded-xl admin-subtle">
+              <span className="text-[var(--navy)]">{d}</span>
               <Button size="sm" variant="ghost" onClick={() => setBlocked(blocked.filter((x) => x !== d))}>
                 Remove
               </Button>

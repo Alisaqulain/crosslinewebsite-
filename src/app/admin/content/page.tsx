@@ -65,7 +65,7 @@ export default function AdminContentPage() {
     <AdminShell title="Website Content">
       <div className="space-y-8 max-w-3xl">
         <Card className="space-y-4">
-          <h2 className="font-semibold text-white">About Section</h2>
+          <h2 className="font-semibold text-[var(--navy)]">About Section</h2>
           <div>
             <Label>Title</Label>
             <Input value={content.aboutTitle} onChange={(e) => setContent({ ...content, aboutTitle: e.target.value })} />
@@ -86,9 +86,9 @@ export default function AdminContentPage() {
         </Card>
 
         <Card className="space-y-4">
-          <h2 className="font-semibold text-white">Testimonials</h2>
+          <h2 className="font-semibold text-[var(--navy)]">Testimonials</h2>
           {content.testimonials.map((t, i) => (
-            <div key={i} className="p-4 rounded-xl bg-[#0b1219] space-y-2">
+            <div key={i} className="p-4 rounded-xl admin-subtle space-y-2">
               <Input value={t.name} onChange={(e) => {
                 const testimonials = [...content.testimonials];
                 testimonials[i] = { ...t, name: e.target.value };
@@ -110,7 +110,7 @@ export default function AdminContentPage() {
         </Card>
 
         <Card className="space-y-4">
-          <h2 className="font-semibold text-white">Contact Details</h2>
+          <h2 className="font-semibold text-[var(--navy)]">Contact Details</h2>
           <div>
             <Label>Email</Label>
             <Input value={content.contactEmail} onChange={(e) => setContent({ ...content, contactEmail: e.target.value })} />
@@ -131,7 +131,7 @@ export default function AdminContentPage() {
         </Card>
 
         <Card className="space-y-4">
-          <h2 className="font-semibold text-white">Gallery</h2>
+          <h2 className="font-semibold text-[var(--navy)]">Gallery</h2>
           <p className="text-xs text-slate-500">For full gallery management, use the Gallery module.</p>
           <div className="grid sm:grid-cols-3 gap-2">
             <Input placeholder="Image URL" value={newImage.src} onChange={(e) => setNewImage({ ...newImage, src: e.target.value })} />
@@ -147,7 +147,7 @@ export default function AdminContentPage() {
           </Button>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {gallery.slice(0, 20).map((g) => (
-              <div key={g.id} className="flex justify-between text-sm text-slate-300 p-2 bg-[#0b1219] rounded-lg">
+              <div key={g.id} className="flex justify-between text-sm text-[var(--text-muted)] p-2 admin-subtle rounded-lg">
                 <span className="truncate">{g.alt}</span>
                 <button type="button" onClick={() => setGallery(gallery.filter((x) => x.id !== g.id))} className="text-red-400"><Trash2 className="h-4 w-4" /></button>
               </div>

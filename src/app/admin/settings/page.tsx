@@ -13,7 +13,7 @@ export default function AdminSettingsPage() {
         <Card>
           <div className="flex items-center gap-3 mb-6">
             <Settings className="h-6 w-6 text-[#F7931E]" />
-            <h2 className="font-semibold text-white">Stadium Settings</h2>
+            <h2 className="font-semibold text-[var(--navy)]">Stadium Settings</h2>
           </div>
           <div className="space-y-4">
             <div>
@@ -42,20 +42,20 @@ export default function AdminSettingsPage() {
           </p>
         </Card>
         <Card>
-          <h2 className="font-semibold text-white mb-2 flex items-center gap-2">
+          <h2 className="font-semibold text-[var(--navy)] mb-2 flex items-center gap-2">
             <Mail className="h-5 w-5 text-[#39B54A]" />
             Email Notifications
           </h2>
           <p className="text-sm text-slate-400 mb-4">
-            Configure in your <code className="text-slate-300">.env</code> file:
+            Configure in your <code className="text-[var(--text-muted)]">.env</code> file:
           </p>
-          <ul className="space-y-2 text-sm text-slate-300 font-mono">
+          <ul className="space-y-2 text-sm text-[var(--text-muted)] font-mono">
             <li>EMAIL_USER=</li>
             <li>EMAIL_PASS=</li>
             <li>ADMIN_EMAIL=</li>
             <li>MONGODB_URI=</li>
           </ul>
-          <ul className="mt-4 space-y-2 text-sm text-slate-300">
+          <ul className="mt-4 space-y-2 text-sm text-[var(--text-muted)]">
             <li className="flex items-center gap-2"><span className="text-[#39B54A]">✓</span> Booking request received</li>
             <li className="flex items-center gap-2"><span className="text-[#39B54A]">✓</span> Booking approved confirmation</li>
             <li className="flex items-center gap-2"><span className="text-[#39B54A]">✓</span> Booking rejection notice</li>

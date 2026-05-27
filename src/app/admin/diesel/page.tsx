@@ -78,7 +78,7 @@ export default function AdminDieselPage() {
   return (
     <AdminShell title="Diesel Cost Entry">
       <Card className="mb-6">
-        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-[var(--navy)] mb-4 flex items-center gap-2">
           <Fuel className="h-5 w-5 text-[#F7931E]" />
           Add Diesel Expense
         </h3>
@@ -116,7 +116,7 @@ export default function AdminDieselPage() {
         </Button>
       </Card>
 
-      <p className="text-lg font-semibold text-white mb-4">
+      <p className="text-lg font-semibold text-[var(--navy)] mb-4">
         Total Diesel Expense: {formatCurrency(total)}
       </p>
 

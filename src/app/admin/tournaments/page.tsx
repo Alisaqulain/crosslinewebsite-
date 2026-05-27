@@ -84,7 +84,7 @@ export default function AdminTournamentsPage() {
                 </div>
               </div>
               <div><Label>Description</Label><Textarea rows={2} value={t.description} onChange={(e) => { const n = [...tournaments]; n[i] = { ...t, description: e.target.value }; setTournaments(n); }} /></div>
-              <label className="flex items-center gap-2 text-sm text-white">
+              <label className="flex items-center gap-2 text-sm text-[var(--navy)]">
                 <input type="checkbox" checked={t.registrationOpen} onChange={(e) => { const n = [...tournaments]; n[i] = { ...t, registrationOpen: e.target.checked }; setTournaments(n); }} />
                 Registration open
               </label>

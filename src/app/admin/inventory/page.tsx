@@ -116,29 +116,29 @@ export default function AdminInventoryPage() {
 
   return (
     <AdminShell title="Ball Stock Management">
-      <p className="text-slate-400 mb-6">Total balls remaining: <strong className="text-white">{totalRemaining}</strong></p>
+      <p className="text-[var(--text-muted)] mb-6">Total balls remaining: <strong className="text-[var(--navy)]">{totalRemaining}</strong></p>
 
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         {stock.map((item) => (
           <Card key={item.quality} hover>
             <div className="flex items-center gap-3 mb-4">
               <Package className="h-8 w-8 text-[#F7931E]" />
-              <p className="font-semibold text-white">{item.label}</p>
+              <p className="font-semibold text-[var(--navy)]">{item.label}</p>
             </div>
             <div className="text-3xl font-bold gradient-text font-[family-name:var(--font-sora)]">{item.remaining}</div>
             <p className="text-xs text-slate-500 mt-1">remaining in stock</p>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2 rounded-lg bg-[#0b1219]">
+              <div className="p-2 rounded-lg admin-subtle">
                 <span className="text-slate-500 flex items-center gap-1">
                   <ArrowDown className="h-3 w-3 text-[#39B54A]" /> Purchased
                 </span>
-                <span className="text-white font-medium">{item.purchased}</span>
+                <span className="font-semibold text-[var(--navy)]">{item.purchased}</span>
               </div>
-              <div className="p-2 rounded-lg bg-[#0b1219]">
+              <div className="p-2 rounded-lg admin-subtle">
                 <span className="text-slate-500 flex items-center gap-1">
                   <ArrowUp className="h-3 w-3 text-[#ED1C24]" /> Used
                 </span>
-                <span className="text-white font-medium">{item.used}</span>
+                <span className="font-semibold text-[var(--navy)]">{item.used}</span>
               </div>
             </div>
           </Card>
@@ -156,7 +156,7 @@ export default function AdminInventoryPage() {
 
       {showPurchase && (
         <Card className="mb-6 space-y-3">
-          <h3 className="font-semibold text-white">New Purchase Entry</h3>
+          <h3 className="font-semibold text-[var(--navy)]">New Purchase Entry</h3>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
               <Label>Ball Quality</Label>
@@ -198,7 +198,7 @@ export default function AdminInventoryPage() {
 
       {showUsage && (
         <Card className="mb-6 space-y-3">
-          <h3 className="font-semibold text-white">Match Ball Usage</h3>
+          <h3 className="font-semibold text-[var(--navy)]">Match Ball Usage</h3>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
               <Label>Match Name</Label>
@@ -236,11 +236,11 @@ export default function AdminInventoryPage() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
-          <h2 className="font-semibold text-white mb-4">Purchase History</h2>
+          <h2 className="font-semibold text-[var(--navy)] mb-4">Purchase History</h2>
           <div className="space-y-2 max-h-80 overflow-y-auto text-sm">
             {purchases.map((p) => (
-              <div key={p.id} className="p-3 rounded-lg bg-[#0b1219]">
-                <p className="text-white font-medium">
+              <div key={p.id} className="p-3 rounded-lg admin-subtle">
+                <p className="font-semibold text-[var(--navy)]">
                   {BALL_QUALITY_LABELS[p.quality]} × {p.quantity}
                 </p>
                 <p className="text-xs text-slate-500">
@@ -251,11 +251,11 @@ export default function AdminInventoryPage() {
           </div>
         </Card>
         <Card>
-          <h2 className="font-semibold text-white mb-4">Usage History</h2>
+          <h2 className="font-semibold text-[var(--navy)] mb-4">Usage History</h2>
           <div className="space-y-2 max-h-80 overflow-y-auto text-sm">
             {usage.map((u) => (
-              <div key={u.id} className="p-3 rounded-lg bg-[#0b1219]">
-                <p className="text-white font-medium">
+              <div key={u.id} className="p-3 rounded-lg admin-subtle">
+                <p className="font-semibold text-[var(--navy)]">
                   {u.matchName} — {BALL_QUALITY_LABELS[u.quality]} × {u.quantity}
                 </p>
                 <p className="text-xs text-slate-500">

@@ -6,7 +6,7 @@ export function StatCard({
   value,
   icon: Icon,
   trend,
-  color = "#F7931E",
+  color = "#e31837",
 }: {
   label: string;
   value: string | number;
@@ -15,16 +15,18 @@ export function StatCard({
   color?: string;
 }) {
   return (
-    <Card>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-slate-400">{label}</p>
-          <p className="mt-2 text-2xl font-bold text-white font-[family-name:var(--font-sora)]">{value}</p>
-          {trend && <p className="mt-1 text-xs text-[#39B54A]">{trend}</p>}
+    <Card className="!p-5 hover:border-[var(--cricket-green)]/20">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-[var(--text-muted)]">{label}</p>
+          <p className="mt-2 text-2xl font-bold text-[var(--navy)] font-[family-name:var(--font-sora)] truncate">
+            {value}
+          </p>
+          {trend && <p className="mt-1 text-xs font-semibold text-[var(--cricket-green)]">{trend}</p>}
         </div>
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl"
-          style={{ backgroundColor: `${color}20` }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+          style={{ backgroundColor: `${color}15` }}
         >
           <Icon className="h-5 w-5" style={{ color }} />
         </div>

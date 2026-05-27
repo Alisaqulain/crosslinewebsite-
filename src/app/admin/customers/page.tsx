@@ -57,9 +57,9 @@ export default function AdminCustomersPage() {
               ) : (
                 customers.map((c) => (
                   <tr key={c.email} className="border-b border-white/5">
-                    <td className="p-4 text-white font-medium">{c.name}</td>
-                    <td className="p-4 text-slate-300">{c.email}</td>
-                    <td className="p-4 text-slate-300">{c.phone}</td>
+                    <td className="p-4 font-semibold text-[var(--navy)]">{c.name}</td>
+                    <td className="p-4 text-[var(--text-muted)]">{c.email}</td>
+                    <td className="p-4 text-[var(--text-muted)]">{c.phone}</td>
                     <td className="p-4 text-[#FBB03B] font-semibold">{c.count}</td>
                   </tr>
                 ))

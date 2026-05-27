@@ -93,13 +93,13 @@ export default function AdminFinancePage() {
         ].map((item) => (
           <Card key={item.label} className="!p-4">
             <p className="text-xs text-slate-500">{item.label}</p>
-            <p className="text-lg font-bold text-white mt-1">{formatCurrency(item.value)}</p>
+            <p className="text-lg font-bold text-[var(--navy)] mt-1">{formatCurrency(item.value)}</p>
           </Card>
         ))}
       </div>
 
       <Card className="mb-6">
-        <h3 className="font-semibold text-white mb-4">Add Manual Entry</h3>
+        <h3 className="font-semibold text-[var(--navy)] mb-4">Add Manual Entry</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <Label>Date</Label>
@@ -145,7 +145,7 @@ export default function AdminFinancePage() {
       </Card>
 
       <Card className="p-0 md:p-6">
-        <h3 className="font-semibold text-white mb-4 px-4 md:px-0 pt-4 md:pt-0">Recent Transactions</h3>
+        <h3 className="font-semibold text-[var(--navy)] mb-4 px-4 md:px-0 pt-4 md:pt-0">Recent Transactions</h3>
         <ResponsiveTable
           data={summary.recentTransactions}
           rowKey={(t) => t.id}

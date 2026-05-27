@@ -19,12 +19,13 @@ export function SectionHeading({
         <span
           className={cn(
             "inline-block text-xs font-bold uppercase tracking-[0.2em] mb-3",
-            light ? "text-[#7dd3fc]" : "text-[var(--cricket-green)]"
+            light ? "text-[var(--cricket-green-light)]" : "text-[var(--cricket-green)]"
           )}
         >
           {badge}
         </span>
       )}
+      <div className={cn("accent-line mb-4", align === "center" && "mx-auto", !light && "opacity-90")} />
       <h2
         className={cn(
           "font-[family-name:var(--font-sora)] text-3xl sm:text-4xl font-bold tracking-tight",

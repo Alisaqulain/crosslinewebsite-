@@ -64,7 +64,7 @@ export default function AdminGalleryPage() {
   return (
     <AdminShell title="Gallery Management">
       <Card className="mb-6">
-        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-[var(--navy)] mb-4 flex items-center gap-2">
           <Image className="h-5 w-5" />
           Add Image (URL)
         </h3>
@@ -96,7 +96,7 @@ export default function AdminGalleryPage() {
             </div>
             <div className="p-4 flex justify-between items-start gap-2">
               <div>
-                <p className="text-sm font-medium text-white">{item.alt}</p>
+                <p className="text-sm font-medium text-[var(--navy)]">{item.alt}</p>
                 <p className="text-xs text-slate-500">{item.category}</p>
               </div>
               <Button

@@ -1,32 +1,54 @@
 "use client";
 
-import { Menu } from "lucide-react";
-import { useState } from "react";
+import { Menu, User } from "lucide-react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AdminSidebar } from "./AdminSidebar";
 
 export function AdminHeader({ title }: { title: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [username, setUsername] = useState("Admin");
+
+  useEffect(() => {
+    setUsername(sessionStorage.getItem("crossline_admin_user") ?? "Admin");
+  }, []);
 
   return (
     <>
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-64 h-full">
-            <AdminSidebar className="flex" />
+          <div className="absolute inset-0 bg-[var(--navy-deep)]/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <div className="relative w-72 h-full shadow-2xl">
+            <AdminSidebar className="flex" onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-white/8 bg-[#0b1219]/90 backdrop-blur px-4 lg:px-6">
-        <button className="lg:hidden p-2 text-white" onClick={() => setMobileOpen(true)}>
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-[var(--admin-border)] bg-white/90 backdrop-blur-xl px-4 lg:px-8 shadow-sm">
+        <button
+          type="button"
+          className="lg:hidden p-2.5 rounded-xl text-[var(--navy)] hover:bg-[var(--bg-alt)]"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+        >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="font-[family-name:var(--font-sora)] text-lg font-semibold text-white">{title}</h1>
-        <div className="ml-auto">
-          <Link href="/" className="text-sm text-slate-400 hover:text-[#FBB03B]">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--cricket-green)]">Admin Panel</p>
+          <h1 className="font-[family-name:var(--font-sora)] text-lg font-bold text-[var(--navy)] leading-tight">{title}</h1>
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          <Link
+            href="/"
+            className="hidden sm:inline text-sm font-medium text-[var(--text-muted)] hover:text-[var(--brand-red)] transition-colors"
+          >
             View Site →
           </Link>
+          <div className="flex items-center gap-2 rounded-full bg-[var(--bg-alt)] pl-1 pr-3 py-1 border border-[var(--border)]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--navy)] text-white">
+              <User className="h-4 w-4" />
+            </span>
+            <span className="text-sm font-semibold text-[var(--navy)] capitalize">{username}</span>
+          </div>
         </div>
       </header>
     </>
@@ -35,11 +57,11 @@ export function AdminHeader({ title }: { title: string }) {
 
 export function AdminShell({ children, title }: { children: React.ReactNode; title: string }) {
   return (
-    <div className="admin-theme min-h-screen bg-[#0b1219]">
+    <div className="admin-theme min-h-screen">
       <AdminSidebar />
-      <div className="lg:pl-64">
+      <div className="lg:pl-72">
         <AdminHeader title={title} />
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8 max-w-[1600px]">{children}</main>
       </div>
     </div>
   );

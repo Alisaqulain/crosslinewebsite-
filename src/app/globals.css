@@ -38,6 +38,12 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-outfit), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(227, 24, 55, 0.15);
+  color: var(--navy);
 }
 
 .site-theme .gradient-text {
@@ -118,6 +124,15 @@ body {
 .section-dark {
   background: var(--gradient-navy);
   color: white;
+  position: relative;
+}
+
+.section-dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(46, 204, 90, 0.04), transparent);
+  pointer-events: none;
 }
 
 .accent-line {
@@ -166,21 +181,10 @@ body {
 .float-slow { animation: float 4s ease-in-out infinite; }
 
 .admin-theme {
-  --bg: #070d12;
-  --text: #f1f5f9;
-  --border: rgba(255, 255, 255, 0.08);
-  background: #070d12;
-  color: #f1f5f9;
+  --bg: #eef2f7;
+  --text: #0a1a3a;
+  --border: rgba(10, 26, 58, 0.08);
+  background: #eef2f7;
+  color: #0a1a3a;
   min-height: 100vh;
 }
-.admin-theme .rounded-2xl.border {
-  background: #1a2736 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  color: #f1f5f9;
-}
-.admin-theme input, .admin-theme select, .admin-theme textarea {
-  background: #0b1219 !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #f1f5f9 !important;
-}
-.admin-theme label { color: #cbd5e1 !important; }

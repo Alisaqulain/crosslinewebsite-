@@ -93,7 +93,7 @@ export default function AdminMatchesPage() {
 
       {editing && (
         <Card className="mb-6 space-y-4">
-          <h3 className="font-semibold text-white">Edit Match</h3>
+          <h3 className="font-semibold text-[var(--navy)]">Edit Match</h3>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <Label>Match Title</Label>

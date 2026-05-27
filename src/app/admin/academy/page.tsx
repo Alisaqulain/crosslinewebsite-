@@ -50,7 +50,7 @@ export default function AdminAcademyPage() {
           <div><Label>Description</Label><Textarea rows={3} value={academy.description} onChange={(e) => setAcademy({ ...academy, description: e.target.value })} /></div>
         </Card>
         <div className="flex justify-between items-center">
-          <h2 className="font-semibold text-white">Programs</h2>
+          <h2 className="font-semibold text-[var(--navy)]">Programs</h2>
           <Button size="sm" onClick={() => setAcademy({ ...academy, programs: [{ id: `A-${Date.now()}`, title: "New Program", description: "", duration: "", level: "beginner" }, ...academy.programs] })}>
             <Plus className="h-4 w-4" /> Add
           </Button>
