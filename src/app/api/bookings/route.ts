@@ -68,13 +68,13 @@ export async function POST(req: NextRequest) {
 
     await updateStore((s) => ({ ...s, bookings: [booking, ...s.bookings] }));
 
-    const { subject, body: emailBody } = bookingReceivedEmail(
+    const email = bookingReceivedEmail(
       booking.customerName,
       booking.id,
       booking.date,
       booking.slotLabel
     );
-    await sendEmail(booking.email, subject, emailBody);
+    await sendEmail(booking.email, email);
 
     return NextResponse.json({ booking, message: "Booking request received" }, { status: 201 });
   } catch {

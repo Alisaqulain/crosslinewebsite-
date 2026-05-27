@@ -51,22 +51,22 @@ export async function PATCH(
   const booking = store.bookings.find((b) => b.id === id)!;
 
   if (body.status === "approved") {
-    const { subject, body: emailBody } = bookingApprovedEmail(
+    const email = bookingApprovedEmail(
       booking.customerName,
       booking.id,
       booking.date,
       booking.slotLabel,
       booking.slotPrice
     );
-    await sendEmail(booking.email, subject, emailBody);
+    await sendEmail(booking.email, email);
   } else if (body.status === "rejected") {
-    const { subject, body: emailBody } = bookingRejectedEmail(
+    const email = bookingRejectedEmail(
       booking.customerName,
       booking.id,
       booking.date,
       booking.slotLabel
     );
-    await sendEmail(booking.email, subject, emailBody);
+    await sendEmail(booking.email, email);
   }
 
   return NextResponse.json({ booking });

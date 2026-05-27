@@ -1,11 +1,10 @@
-const ADMIN_TOKEN = "crossline-admin-secret";
-
 export function adminHeaders(): HeadersInit {
   if (typeof window !== "undefined") {
-    const token = sessionStorage.getItem("crossline_admin_token") ?? ADMIN_TOKEN;
+    const token = sessionStorage.getItem("crossline_admin_token");
+    if (!token) throw new Error("Not authenticated");
     return { "Content-Type": "application/json", "x-admin-token": token };
   }
-  return { "Content-Type": "application/json", "x-admin-token": ADMIN_TOKEN };
+  return { "Content-Type": "application/json" };
 }
 
 export async function fetchPublic(date?: string) {

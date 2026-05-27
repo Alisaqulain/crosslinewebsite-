@@ -7,25 +7,42 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Lock, Loader2 } from "lucide-react";
 import { MediaImage } from "@/components/media/MediaImage";
 import { images } from "@/lib/media";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const email = fd.get("email") as string;
+    const username = fd.get("username") as string;
     const password = fd.get("password") as string;
-    if (email === "admin@crossline.com" && password === "admin123") {
+
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Invalid credentials");
+        return;
+      }
       sessionStorage.setItem("crossline_admin", "true");
-      sessionStorage.setItem("crossline_admin_token", "crossline-admin-secret");
+      sessionStorage.setItem("crossline_admin_token", data.token);
+      sessionStorage.setItem("crossline_admin_user", data.username);
       router.push("/admin");
-    } else {
-      setError("Invalid credentials. Use admin@crossline.com / admin123");
+    } catch {
+      setError("Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,23 +60,33 @@ export default function AdminLoginPage() {
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" defaultValue="admin@crossline.com" required />
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              placeholder="admincrossline"
+              required
+            />
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" defaultValue="admin123" required />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
-          <Button type="submit" className="w-full">
-            <Lock className="h-4 w-4" />
+          <Button type="submit" className="w-full min-h-[48px]" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
             Sign In
           </Button>
         </form>
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Demo: admin@crossline.com / admin123
-        </p>
-        <Link href="/" className="mt-4 block text-center text-sm text-[#FBB03B] hover:underline">
+        <Link href="/" className="mt-6 block text-center text-sm text-[#FBB03B] hover:underline">
           ← Back to website
         </Link>
       </Card>
