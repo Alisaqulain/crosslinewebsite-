@@ -38,7 +38,7 @@ export default function AdminSlotsPage() {
   const load = useCallback(() => {
     fetchAdminStore().then(({ store: s }) => {
       setSlots(
-        s.slots.map((slot) => ({
+        s.slots.map((slot: TimeSlot) => ({
           ...slot,
           validity: slot.validity ?? (slot.date ? "date_range" : "lifetime"),
         }))
