@@ -70,8 +70,16 @@ export async function patchAdmin(section: string, data: unknown) {
     headers: adminHeaders(),
     body: JSON.stringify({ section, data }),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? "Update failed");
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg =
+      typeof json.error === "string"
+        ? json.error
+        : res.status === 401
+          ? "Session expired — log in again"
+          : "Update failed";
+    throw new Error(msg);
+  }
   return json;
 }
 
@@ -93,4 +101,15 @@ export async function fetchBookings(params?: { status?: string; date?: string })
   const res = await fetch(`/api/bookings?${q}`, { headers: adminHeaders(), cache: "no-store" });
   if (!res.ok) throw new Error("Failed to load bookings");
   return res.json();
+}
+
+export async function createWalkInBooking(data: Record<string, unknown>) {
+  const res = await fetch("/api/bookings", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ ...data, walkIn: true }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Failed to save walk-in booking");
+  return json;
 }

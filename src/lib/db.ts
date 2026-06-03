@@ -31,8 +31,10 @@ function mergeStore(parsed: Partial<AppStore>): AppStore {
     dieselExpenses: parsed.dieselExpenses ?? defaultStore.dieselExpenses,
     financeEntries: parsed.financeEntries ?? defaultStore.financeEntries,
     contactMessages: parsed.contactMessages ?? defaultStore.contactMessages,
-    slots: parsed.slots ?? defaultStore.slots,
-    blockedDates: parsed.blockedDates ?? defaultStore.blockedDates,
+    slots: Array.isArray(parsed.slots) ? parsed.slots : defaultStore.slots,
+    blockedDates: Array.isArray(parsed.blockedDates)
+      ? parsed.blockedDates
+      : defaultStore.blockedDates,
   };
 }
 
@@ -80,15 +82,15 @@ async function writeToFile(store: AppStore): Promise<void> {
 
 async function readFromMongo(): Promise<AppStore> {
   await connectMongo();
-  let doc = await StoreModel.findById(STORE_DOC_ID).lean();
+  const doc = await StoreModel.findOne({ _id: STORE_DOC_ID }).lean();
   if (!doc) {
-    const seeded = defaultStore;
-    await StoreModel.findByIdAndUpdate(
-      STORE_DOC_ID,
-      { _id: STORE_DOC_ID, ...seeded },
-      { upsert: true, new: true }
+    const fromFile = await readFromFile();
+    await StoreModel.findOneAndReplace(
+      { _id: STORE_DOC_ID },
+      { _id: STORE_DOC_ID, ...fromFile },
+      { upsert: true }
     );
-    return seeded;
+    return fromFile;
   }
   const { _id: _unused, __v: _v, createdAt: _c, updatedAt: _u, ...store } = doc as AppStore & {
     _id?: string;
@@ -101,11 +103,11 @@ async function readFromMongo(): Promise<AppStore> {
 
 async function writeToMongo(store: AppStore): Promise<void> {
   await connectMongo();
-  await StoreModel.findOneAndReplace(
-    { _id: STORE_DOC_ID },
-    { _id: STORE_DOC_ID, ...store },
-    { upsert: true }
-  );
+  const payload = { _id: STORE_DOC_ID, ...store };
+  await StoreModel.findOneAndReplace({ _id: STORE_DOC_ID }, payload, {
+    upsert: true,
+    runValidators: false,
+  });
 }
 
 export async function readStore(): Promise<AppStore> {
@@ -125,8 +127,9 @@ export async function writeStore(store: AppStore): Promise<void> {
       await writeToMongo(store);
       return;
     } catch (err) {
-      console.error("MongoDB write failed:", err);
-      throw err;
+      console.error("MongoDB write failed, falling back to file:", err);
+      await writeToFile(store);
+      return;
     }
   }
   await writeToFile(store);
@@ -139,6 +142,4 @@ export async function updateStore(updater: (store: AppStore) => AppStore): Promi
   return next;
 }
 
-export function generateId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
-}
+export { generateId } from "./id";

@@ -11,7 +11,7 @@ import { createBooking, fetchPublic } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
 import { Calendar, CheckCircle, Loader2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { MatchType, TimeSlot } from "@/lib/types";
+import type { BookingSlotView, MatchType } from "@/lib/types";
 
 type Step = "slot" | "details" | "done";
 
@@ -29,7 +29,7 @@ function SlotPricingCards({
   onSelect,
   disabled,
 }: {
-  slots: TimeSlot[];
+  slots: BookingSlotView[];
   selectedSlot: string;
   onSelect: (id: string) => void;
   disabled: boolean;
@@ -37,34 +37,49 @@ function SlotPricingCards({
   if (slots.length === 0) {
     return (
       <p className="text-center py-8 text-[var(--text-muted)]">
-        No slots available for this date. Please choose another date.
+        No sessions for this date. Try another date or contact the stadium.
       </p>
     );
   }
 
+  const anyBookable = slots.some((s) => s.bookable);
+
   return (
-    <div className="grid sm:grid-cols-2 gap-4">
-      {slots.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          disabled={!s.available || disabled}
-          onClick={() => onSelect(s.id)}
-          className={cn(
-            "text-left p-5 rounded-2xl border-2 transition-all min-h-[120px]",
-            selectedSlot === s.id
-              ? "border-[var(--brand-red)] bg-[var(--brand-red)]/5 shadow-md"
-              : "border-[var(--border)] bg-white hover:border-[var(--navy-light)]",
-            (!s.available || disabled) && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          <p className="font-bold text-[var(--navy)]">{s.label}</p>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
-            {s.start} – {s.end}
-          </p>
-          <p className="mt-3 text-xl font-bold text-[var(--brand-red)]">{formatCurrency(s.price)}</p>
-        </button>
-      ))}
+    <div className="space-y-4">
+      {!anyBookable && (
+        <p className="text-center text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          Sessions exist but none can be booked — they may be closed or already full for this date.
+        </p>
+      )}
+      <div className="grid sm:grid-cols-2 gap-4">
+        {slots.map((s) => {
+          const canSelect = s.bookable && !disabled;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              disabled={!canSelect}
+              onClick={() => canSelect && onSelect(s.id)}
+              className={cn(
+                "text-left p-5 rounded-2xl border-2 transition-all min-h-[120px]",
+                selectedSlot === s.id
+                  ? "border-[var(--brand-red)] bg-[var(--brand-red)]/5 shadow-md"
+                  : "border-[var(--border)] bg-white hover:border-[var(--navy-light)]",
+                !canSelect && "opacity-60 cursor-not-allowed bg-slate-50"
+              )}
+            >
+              <p className="font-bold text-[var(--navy)]">{s.label}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                {s.start} – {s.end}
+              </p>
+              <p className="mt-3 text-xl font-bold text-[var(--brand-red)]">{formatCurrency(s.price)}</p>
+              {s.statusLabel && (
+                <p className="mt-2 text-xs font-medium text-amber-700">{s.statusLabel}</p>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -76,7 +91,7 @@ export function BookingWizard() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSlot, setSelectedSlot] = useState("");
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [slots, setSlots] = useState<BookingSlotView[]>([]);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [form, setForm] = useState({
@@ -108,7 +123,7 @@ export function BookingWizard() {
       .finally(() => setLoadingSlots(false));
   }, [selectedDate, toast]);
 
-  const slot = slots.find((s) => s.id === selectedSlot);
+  const slot = slots.find((s) => s.id === selectedSlot && s.bookable);
   const isBlocked = blockedDates.includes(selectedDate);
 
   const validateDetails = () => {
@@ -231,7 +246,10 @@ export function BookingWizard() {
               />
             )}
           </div>
-          <Button disabled={!selectedDate || !selectedSlot || isBlocked} onClick={() => setStep("details")}>
+          <Button
+            disabled={!selectedDate || !selectedSlot || isBlocked || !slot?.bookable}
+            onClick={() => setStep("details")}
+          >
             Continue
           </Button>
         </>

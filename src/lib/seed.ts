@@ -13,6 +13,7 @@ export const defaultStore: AppStore = {
       end: "10:00",
       price: 4500,
       available: true,
+      validity: "lifetime",
     },
     {
       id: "day",
@@ -22,6 +23,7 @@ export const defaultStore: AppStore = {
       end: "14:00",
       price: 5500,
       available: true,
+      validity: "lifetime",
     },
     {
       id: "afternoon",
@@ -31,6 +33,7 @@ export const defaultStore: AppStore = {
       end: "18:00",
       price: 6000,
       available: true,
+      validity: "lifetime",
     },
     {
       id: "evening",
@@ -40,6 +43,7 @@ export const defaultStore: AppStore = {
       end: "22:00",
       price: 7500,
       available: true,
+      validity: "lifetime",
     },
     {
       id: "night",
@@ -48,7 +52,8 @@ export const defaultStore: AppStore = {
       start: "22:00",
       end: "23:30",
       price: 9000,
-      available: true,
+      available: false,
+      validity: "lifetime",
     },
   ],
   bookings: [],

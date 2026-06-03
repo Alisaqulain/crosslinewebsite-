@@ -10,16 +10,29 @@ export type TransactionCategory =
   | "maintenance"
   | "other";
 export type ShiftCategory = "day" | "night";
+/** When the session appears on the booking page */
+export type SessionValidity = "lifetime" | "date_range";
 
 export interface TimeSlot {
   id: string;
+  /** @deprecated Use validity + validFrom/validTo. Kept for older data. */
   date: string;
   label: string;
   start: string;
   end: string;
   price: number;
   available: boolean;
+  validity?: SessionValidity;
+  validFrom?: string;
+  validTo?: string;
 }
+
+/** Slot as shown on the public booking page */
+export type BookingSlotView = TimeSlot & {
+  bookable: boolean;
+  statusLabel?: string;
+  underReview?: boolean;
+};
 
 export interface Booking {
   id: string;
@@ -37,6 +50,11 @@ export interface Booking {
   specialRequest?: string;
   status: BookingStatus;
   createdAt: string;
+  /** Set when approved with balls assigned */
+  ballQuality?: BallQuality;
+  ballsUsed?: number;
+  /** Walk-in / phone booking (not from website) */
+  walkIn?: boolean;
 }
 
 export interface BallPurchase {
@@ -56,6 +74,8 @@ export interface BallUsage {
   quantity: number;
   date: string;
   notes?: string;
+  /** Links usage to an approved booking */
+  bookingId?: string;
 }
 
 export interface StadiumMatch {

@@ -1,6 +1,6 @@
 import type { AppStore } from "./types";
 import { defaultStore } from "./seed";
-import { getSlotsForDate } from "./slots";
+import { getBookingSlotsForDate } from "./slots";
 
 export type PublicDataPayload = Pick<
   AppStore,
@@ -10,7 +10,11 @@ export type PublicDataPayload = Pick<
 };
 
 export function toPublicPayload(store: AppStore, date?: string): PublicDataPayload {
-  const slots = date ? getSlotsForDate(store, date) : store.slots.filter((s) => s.available);
+  const slots = date
+    ? getBookingSlotsForDate(store, date)
+    : store.slots
+        .filter((s) => s.available)
+        .map((s) => ({ ...s, bookable: true }));
 
   return {
     slots,

@@ -7,13 +7,11 @@ import {
   Calendar,
   Clock,
   Package,
-  Trophy,
   BarChart3,
   FileText,
   Image,
   Fuel,
   LogOut,
-  GraduationCap,
   Medal,
 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
@@ -22,15 +20,13 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
-  { href: "/admin/slots", label: "Slot Management", icon: Clock },
-  { href: "/admin/matches", label: "Match Management", icon: Trophy },
-  { href: "/admin/diesel", label: "Diesel Expenses", icon: Fuel },
+  { href: "/admin/slots", label: "Slot Pricing", icon: Clock },
+  { href: "/admin/diesel", label: "Diesel", icon: Fuel },
   { href: "/admin/inventory", label: "Ball Stock", icon: Package },
-  { href: "/admin/finance", label: "Income & Expense", icon: BarChart3 },
+  { href: "/admin/finance", label: "Profit & Loss", icon: BarChart3 },
   { href: "/admin/gallery", label: "Gallery", icon: Image },
   { href: "/admin/content", label: "Website Content", icon: FileText },
   { href: "/admin/tournaments", label: "Tournaments", icon: Medal },
-  { href: "/admin/academy", label: "Academy", icon: GraduationCap },
 ];
 
 export function AdminSidebar({

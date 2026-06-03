@@ -1,5 +1,12 @@
-import type { AppStore, BallQuality, FinanceEntry } from "./types";
+import type { AppStore, BallQuality, FinanceEntry, ShiftCategory } from "./types";
 import { BALL_QUALITY_LABELS } from "./types";
+
+function bookingShift(store: AppStore, slotId: string): ShiftCategory {
+  const slot = store.slots.find((s) => s.id === slotId);
+  if (!slot) return "day";
+  const hour = parseInt(slot.start.split(":")[0] ?? "12", 10);
+  return hour >= 18 || slot.id === "night" ? "night" : "day";
+}
 
 export interface BallStockSummary {
   quality: BallQuality;
@@ -29,9 +36,96 @@ export function getBallStock(store: AppStore): BallStockSummary[] {
   });
 }
 
+export interface PeriodFinance {
+  label: string;
+  monthKey: string;
+  income: {
+    total: number;
+    onlineBooking: number;
+    walkInBooking: number;
+    manual: number;
+  };
+  expense: {
+    total: number;
+    diesel: number;
+    ballPurchase: number;
+    manual: number;
+  };
+  netProfit: number;
+  approvedBookings: number;
+  walkInBookings: number;
+  onlineBookings: number;
+}
+
+function monthKeyOffset(offsetMonths: number): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setHours(12, 0, 0, 0);
+  d.setMonth(d.getMonth() + offsetMonths);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-IN", { month: "long", year: "numeric" });
+}
+
+function inMonth(dateStr: string, monthKey: string): boolean {
+  return dateStr.startsWith(monthKey);
+}
+
+function computePeriodFinance(store: AppStore, monthKey: string, label: string): PeriodFinance {
+  const approved = store.bookings.filter(
+    (b) => b.status === "approved" && inMonth(b.date, monthKey)
+  );
+  const walkInBooking = approved
+    .filter((b) => b.walkIn)
+    .reduce((s, b) => s + b.slotPrice, 0);
+  const onlineBooking = approved
+    .filter((b) => !b.walkIn)
+    .reduce((s, b) => s + b.slotPrice, 0);
+  const manualIncome = store.financeEntries
+    .filter((e) => e.type === "income" && inMonth(e.date, monthKey))
+    .reduce((s, e) => s + e.amount, 0);
+  const diesel = store.dieselExpenses
+    .filter((d) => inMonth(d.date, monthKey))
+    .reduce((s, d) => s + d.totalCost, 0);
+  const ballPurchase = store.ballPurchases
+    .filter((p) => inMonth(p.date, monthKey))
+    .reduce((s, p) => s + p.purchasePrice, 0);
+  const manualExpense = store.financeEntries
+    .filter((e) => e.type === "expense" && inMonth(e.date, monthKey))
+    .reduce((s, e) => s + e.amount, 0);
+
+  const incomeTotal = onlineBooking + walkInBooking + manualIncome;
+  const expenseTotal = diesel + ballPurchase + manualExpense;
+
+  return {
+    label,
+    monthKey,
+    income: {
+      total: incomeTotal,
+      onlineBooking,
+      walkInBooking,
+      manual: manualIncome,
+    },
+    expense: {
+      total: expenseTotal,
+      diesel,
+      ballPurchase,
+      manual: manualExpense,
+    },
+    netProfit: incomeTotal - expenseTotal,
+    approvedBookings: approved.length,
+    walkInBookings: approved.filter((b) => b.walkIn).length,
+    onlineBookings: approved.filter((b) => !b.walkIn).length,
+  };
+}
+
 export function getFinanceSummary(store: AppStore) {
   const today = new Date().toISOString().split("T")[0];
-  const month = today.slice(0, 7);
+  const month = monthKeyOffset(0);
+  const lastMonth = monthKeyOffset(-1);
 
   const bookingIncome = store.bookings
     .filter((b) => b.status === "approved")
@@ -53,22 +147,32 @@ export function getFinanceSummary(store: AppStore) {
   const sumBy = (entries: FinanceEntry[], pred: (e: FinanceEntry) => boolean) =>
     entries.filter(pred).reduce((s, e) => s + e.amount, 0);
 
-  const dayIncome = sumBy(
-    store.financeEntries,
-    (e) => e.type === "income" && e.shift === "day"
-  );
-  const nightIncome = sumBy(
-    store.financeEntries,
-    (e) => e.type === "income" && e.shift === "night"
-  );
-  const dayExpense = sumBy(
-    store.financeEntries,
-    (e) => e.type === "expense" && e.shift === "day"
-  );
-  const nightExpense = sumBy(
-    store.financeEntries,
-    (e) => e.type === "expense" && e.shift === "night"
-  );
+  const bookingDayIncome = store.bookings
+    .filter((b) => b.status === "approved" && bookingShift(store, b.slotId) === "day")
+    .reduce((s, b) => s + b.slotPrice, 0);
+  const bookingNightIncome = store.bookings
+    .filter((b) => b.status === "approved" && bookingShift(store, b.slotId) === "night")
+    .reduce((s, b) => s + b.slotPrice, 0);
+
+  const dayIncome =
+    sumBy(store.financeEntries, (e) => e.type === "income" && e.shift === "day") + bookingDayIncome;
+  const nightIncome =
+    sumBy(store.financeEntries, (e) => e.type === "income" && e.shift === "night") + bookingNightIncome;
+
+  const dayDiesel = store.dieselExpenses
+    .filter((d) => d.shift === "day")
+    .reduce((s, d) => s + d.totalCost, 0);
+  const nightDiesel = store.dieselExpenses
+    .filter((d) => d.shift === "night")
+    .reduce((s, d) => s + d.totalCost, 0);
+
+  const dayExpense =
+    sumBy(store.financeEntries, (e) => e.type === "expense" && e.shift === "day") + dayDiesel;
+  const nightExpense =
+    sumBy(store.financeEntries, (e) => e.type === "expense" && e.shift === "night") + nightDiesel;
+
+  const dayNetProfit = dayIncome - dayExpense;
+  const nightNetProfit = nightIncome - nightExpense;
 
   const todayIncome = store.financeEntries
     .filter((e) => e.date === today && e.type === "income")
@@ -77,12 +181,18 @@ export function getFinanceSummary(store: AppStore) {
     .filter((e) => e.date === today && e.type === "expense")
     .reduce((s, e) => s + e.amount, 0);
 
-  const monthlyIncome = store.financeEntries
-    .filter((e) => e.date.startsWith(month) && e.type === "income")
-    .reduce((s, e) => s + e.amount, 0);
-  const monthlyExpense = store.financeEntries
-    .filter((e) => e.date.startsWith(month) && e.type === "expense")
-    .reduce((s, e) => s + e.amount, 0);
+  const thisMonth = computePeriodFinance(store, month, monthLabel(month));
+  const lastMonthPeriod = computePeriodFinance(store, lastMonth, monthLabel(lastMonth));
+
+  const allTimeWalkInIncome = store.bookings
+    .filter((b) => b.status === "approved" && b.walkIn)
+    .reduce((s, b) => s + b.slotPrice, 0);
+  const allTimeOnlineIncome = store.bookings
+    .filter((b) => b.status === "approved" && !b.walkIn)
+    .reduce((s, b) => s + b.slotPrice, 0);
+
+  const monthlyIncome = thisMonth.income.total;
+  const monthlyExpense = thisMonth.expense.total;
 
   const recentTransactions = [
     ...store.financeEntries.map((e) => ({
@@ -128,9 +238,17 @@ export function getFinanceSummary(store: AppStore) {
     dayExpense,
     nightIncome,
     nightExpense,
+    dayNetProfit,
+    nightNetProfit,
+    bookingDayIncome,
+    bookingNightIncome,
     dieselTotal,
     ballPurchaseTotal,
     bookingIncome,
+    allTimeWalkInIncome,
+    allTimeOnlineIncome,
+    thisMonth,
+    lastMonth: lastMonthPeriod,
     monthlyIncome,
     monthlyExpense,
     recentTransactions,

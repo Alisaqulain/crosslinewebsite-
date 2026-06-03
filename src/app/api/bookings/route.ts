@@ -3,7 +3,8 @@ import { readStore, updateStore, generateId } from "@/lib/db";
 import { isAdminRequest, unauthorized } from "@/lib/auth";
 import { sendEmail, bookingReceivedEmail } from "@/lib/email";
 import { hasApprovedBooking, isSlotAvailableForUser } from "@/lib/slots";
-import type { Booking, MatchType } from "@/lib/types";
+import type { BallQuality, Booking, MatchType } from "@/lib/types";
+import { upsertBallUsageForBooking } from "@/lib/ball-stock";
 
 export async function GET(req: NextRequest) {
   if (!isAdminRequest(req)) return unauthorized();
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const store = await readStore();
+    const walkIn = Boolean(body.walkIn);
+
+    if (walkIn && !isAdminRequest(req)) return unauthorized();
 
     const slot = store.slots.find((s) => s.id === body.slotId);
     if (!slot) {
@@ -37,12 +41,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "This slot is already booked" }, { status: 400 });
     }
 
+    const ballsUsed = Number(body.ballsUsed) || 0;
+    const ballQuality = body.ballQuality as BallQuality | undefined;
+
     const booking: Booking = {
       id: generateId("BK"),
       customerName: body.customerName?.trim(),
-      email: body.email?.trim(),
+      email: (body.email?.trim() || (walkIn ? "walkin@crossline.local" : "")),
       phone: body.phone?.trim(),
-      address: body.address?.trim(),
+      address: body.address?.trim() || (walkIn ? "Walk-in" : ""),
       date: body.date,
       slotId: body.slotId,
       slotLabel: slot.label,
@@ -51,11 +58,25 @@ export async function POST(req: NextRequest) {
       numberOfPlayers: Number(body.numberOfPlayers) || 0,
       matchType: (body.matchType as MatchType) ?? "friendly",
       specialRequest: body.specialRequest?.trim(),
-      status: "pending",
+      status: walkIn ? "approved" : "pending",
       createdAt: new Date().toISOString(),
+      walkIn: walkIn || undefined,
+      ballQuality: walkIn && ballsUsed > 0 ? ballQuality : undefined,
+      ballsUsed: walkIn && ballsUsed > 0 ? ballsUsed : undefined,
     };
 
-    if (
+    if (walkIn) {
+      if (!booking.customerName || !booking.phone || !booking.date || !booking.teamName) {
+        return NextResponse.json({ error: "Name, phone, team, and date are required" }, { status: 400 });
+      }
+      if (ballsUsed > 0 && !ballQuality) {
+        return NextResponse.json({ error: "Select ball quality" }, { status: 400 });
+      }
+      if (ballsUsed > 0 && ballQuality) {
+        const { error } = upsertBallUsageForBooking(store, booking, ballQuality, ballsUsed);
+        if (error) return NextResponse.json({ error }, { status: 400 });
+      }
+    } else if (
       !booking.customerName ||
       !booking.email ||
       !booking.phone ||
@@ -66,17 +87,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    await updateStore((s) => ({ ...s, bookings: [booking, ...s.bookings] }));
+    await updateStore((s) => {
+      let ballUsage = s.ballUsage;
+      if (walkIn && ballsUsed > 0 && ballQuality) {
+        const result = upsertBallUsageForBooking(s, booking, ballQuality, ballsUsed);
+        if (!result.error) ballUsage = result.ballUsage;
+      }
+      return { ...s, bookings: [booking, ...s.bookings], ballUsage };
+    });
 
-    const email = bookingReceivedEmail(
-      booking.customerName,
-      booking.id,
-      booking.date,
-      booking.slotLabel
+    if (!walkIn) {
+      const email = bookingReceivedEmail(
+        booking.customerName,
+        booking.id,
+        booking.date,
+        booking.slotLabel
+      );
+      await sendEmail(booking.email, email);
+    }
+
+    return NextResponse.json(
+      { booking, message: walkIn ? "Walk-in booking saved" : "Booking request received" },
+      { status: 201 }
     );
-    await sendEmail(booking.email, email);
-
-    return NextResponse.json({ booking, message: "Booking request received" }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
   }

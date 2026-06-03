@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select } from "@/components/ui/Input";
@@ -12,18 +13,21 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { DieselExpense, ShiftCategory } from "@/lib/types";
 import { Fuel, Loader2, Plus, Save } from "lucide-react";
 
+const emptyForm = () => ({
+  date: new Date().toISOString().split("T")[0],
+  liters: 0,
+  pricePerLiter: 0,
+  purpose: "",
+  shift: "day" as ShiftCategory,
+});
+
 export default function AdminDieselPage() {
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<DieselExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    date: new Date().toISOString().split("T")[0],
-    liters: 0,
-    pricePerLiter: 0,
-    purpose: "",
-    shift: "day" as ShiftCategory,
-  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
     fetchAdminStore().then(({ store }) => {
@@ -38,29 +42,47 @@ export default function AdminDieselPage() {
       await patchAdmin("dieselExpenses", data);
       setExpenses(data);
       toast("Saved", "success");
-    } catch {
-      toast("Save failed", "error");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Save failed", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const addEntry = () => {
+  const submitEntry = () => {
+    if (!form.liters) return;
     const totalCost = form.liters * form.pricePerLiter;
-    const entry: DieselExpense = {
-      id: `DE-${Date.now().toString(36).toUpperCase()}`,
-      ...form,
-      totalCost,
-    };
-    const next = [entry, ...expenses];
-    save(next);
+    if (editingId) {
+      const next = expenses.map((e) =>
+        e.id === editingId ? { ...e, ...form, totalCost } : e
+      );
+      save(next);
+      setEditingId(null);
+    } else {
+      const entry: DieselExpense = {
+        id: `DE-${Date.now().toString(36).toUpperCase()}`,
+        ...form,
+        totalCost,
+      };
+      save([entry, ...expenses]);
+    }
+    setForm(emptyForm());
+  };
+
+  const startEdit = (e: DieselExpense) => {
+    setEditingId(e.id);
     setForm({
-      date: new Date().toISOString().split("T")[0],
-      liters: 0,
-      pricePerLiter: 0,
-      purpose: "",
-      shift: "day",
+      date: e.date,
+      liters: e.liters,
+      pricePerLiter: e.pricePerLiter,
+      purpose: e.purpose,
+      shift: e.shift,
     });
+  };
+
+  const deleteEntry = (id: string) => {
+    if (!confirm("Delete this diesel entry?")) return;
+    save(expenses.filter((x) => x.id !== id));
   };
 
   const total = expenses.reduce((s, e) => s + e.totalCost, 0);
@@ -80,7 +102,7 @@ export default function AdminDieselPage() {
       <Card className="mb-6">
         <h3 className="font-semibold text-[var(--navy)] mb-4 flex items-center gap-2">
           <Fuel className="h-5 w-5 text-[#F7931E]" />
-          Add Diesel Expense
+          {editingId ? "Edit Diesel Expense" : "Add Diesel Expense"}
         </h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
@@ -110,10 +132,17 @@ export default function AdminDieselPage() {
         <p className="mt-3 text-sm text-slate-400">
           Total: {formatCurrency(form.liters * form.pricePerLiter)}
         </p>
-        <Button className="mt-4" onClick={addEntry} disabled={saving || !form.liters}>
-          <Plus className="h-4 w-4" />
-          Add Entry
-        </Button>
+        <div className="flex gap-2 mt-4">
+          <Button onClick={submitEntry} disabled={saving || !form.liters}>
+            {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {editingId ? "Update Entry" : "Add Entry"}
+          </Button>
+          {editingId && (
+            <Button variant="ghost" onClick={() => { setEditingId(null); setForm(emptyForm()); }}>
+              Cancel
+            </Button>
+          )}
+        </div>
       </Card>
 
       <p className="text-lg font-semibold text-[var(--navy)] mb-4">
@@ -133,16 +162,10 @@ export default function AdminDieselPage() {
             { key: "shift", header: "Shift", render: (e) => <span className="capitalize">{e.shift}</span> },
             { key: "purpose", header: "Purpose", render: (e) => e.purpose },
             {
-              key: "del",
+              key: "actions",
               header: "",
               render: (e) => (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => save(expenses.filter((x) => x.id !== e.id))}
-                >
-                  Remove
-                </Button>
+                <EntryActions onEdit={() => startEdit(e)} onDelete={() => deleteEntry(e.id)} />
               ),
             },
           ]}

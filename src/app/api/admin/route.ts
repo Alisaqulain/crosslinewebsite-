@@ -63,7 +63,9 @@ export async function PATCH(req: NextRequest) {
     });
 
     return NextResponse.json({ store, finance: getFinanceSummary(store) });
-  } catch {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  } catch (err) {
+    console.error("Admin PATCH failed:", err);
+    const message = err instanceof Error ? err.message : "Update failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

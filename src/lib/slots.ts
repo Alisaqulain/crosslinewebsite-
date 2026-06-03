@@ -1,4 +1,29 @@
-import type { AppStore, Booking, TimeSlot } from "./types";
+import type { AppStore, Booking, BookingSlotView, TimeSlot } from "./types";
+
+export function isSessionActiveOnDate(slot: TimeSlot, date: string): boolean {
+  const validity = slot.validity ?? (slot.date ? "date_range" : "lifetime");
+
+  if (validity === "lifetime") {
+    if (slot.date && slot.date !== date) return false;
+    return true;
+  }
+
+  const from = slot.validFrom ?? slot.date ?? "";
+  const to = slot.validTo ?? slot.date ?? from;
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
+}
+
+export function formatSessionValidity(slot: TimeSlot): string {
+  const validity = slot.validity ?? (slot.date ? "date_range" : "lifetime");
+  if (validity === "lifetime") return "Lifetime";
+  const from = slot.validFrom ?? slot.date;
+  const to = slot.validTo ?? slot.date ?? from;
+  if (!from) return "Date range (set dates)";
+  if (!to || to === from) return `From ${from}`;
+  return `${from} → ${to}`;
+}
 
 export function hasApprovedBooking(
   bookings: Booking[],
@@ -26,22 +51,33 @@ export function isSlotAvailableForUser(
   bookings: Booking[]
 ): boolean {
   if (!slot.available) return false;
-  if (slot.date && slot.date !== date) return false;
+  if (!isSessionActiveOnDate(slot, date)) return false;
   return !hasApprovedBooking(bookings, slot.id, date);
 }
 
-export function getSlotsForDate(
-  store: AppStore,
-  date: string
-): (TimeSlot & { underReview?: boolean })[] {
-  const templates = store.slots.filter((s) => !s.date || s.date === date);
+export function getBookingSlotsForDate(store: AppStore, date: string): BookingSlotView[] {
+  return store.slots
+    .filter((s) => isSessionActiveOnDate(s, date))
+    .map((s) => {
+      const underReview = hasPendingBooking(store.bookings, s.id, date);
+      const booked = hasApprovedBooking(store.bookings, s.id, date);
+      let statusLabel: string | undefined;
+      if (!s.available) statusLabel = "Closed — not open for booking";
+      else if (booked) statusLabel = "Already booked on this date";
+      else if (underReview) statusLabel = "Booking under review";
 
-  return templates
-    .filter((s) => isSlotAvailableForUser(s, date, store.bookings))
-    .map((s) => ({
-      ...s,
-      underReview: hasPendingBooking(store.bookings, s.id, date),
-    }));
+      return {
+        ...s,
+        bookable: isSlotAvailableForUser(s, date, store.bookings),
+        statusLabel,
+        underReview,
+      };
+    });
+}
+
+/** @deprecated Use getBookingSlotsForDate */
+export function getSlotsForDate(store: AppStore, date: string): BookingSlotView[] {
+  return getBookingSlotsForDate(store, date).filter((s) => s.bookable);
 }
 
 export function getAdminSlotStatus(
@@ -49,7 +85,7 @@ export function getAdminSlotStatus(
   date: string,
   bookings: Booking[]
 ): "available" | "booked" | "under_review" | "blocked" {
-  if (!slot.available) return "blocked";
+  if (!slot.available || !isSessionActiveOnDate(slot, date)) return "blocked";
   if (hasApprovedBooking(bookings, slot.id, date)) return "booked";
   if (hasPendingBooking(bookings, slot.id, date)) return "under_review";
   return "available";

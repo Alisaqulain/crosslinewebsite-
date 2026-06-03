@@ -1,8 +1,11 @@
 import mongoose, { Schema } from "mongoose";
 import type { AppStore } from "../types";
 
-const StoreSchema = new Schema<AppStore>(
+export const STORE_DOC_ID = "main";
+
+const StoreSchema = new Schema<AppStore & { _id: string }>(
   {
+    _id: { type: String, required: true, default: STORE_DOC_ID },
     bookings: { type: Schema.Types.Mixed, default: [] },
     slots: { type: Schema.Types.Mixed, default: [] },
     blockedDates: { type: [String], default: [] },
@@ -20,7 +23,11 @@ const StoreSchema = new Schema<AppStore>(
   { timestamps: true }
 );
 
-export const StoreModel =
-  mongoose.models.CrosslineStore ?? mongoose.model<AppStore>("CrosslineStore", StoreSchema);
+if (mongoose.models.CrosslineStore) {
+  delete mongoose.models.CrosslineStore;
+}
 
-export const STORE_DOC_ID = "main";
+export const StoreModel = mongoose.model<AppStore & { _id: string }>(
+  "CrosslineStore",
+  StoreSchema
+);
