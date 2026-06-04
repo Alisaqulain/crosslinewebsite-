@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { fetchAdminStore } from "@/lib/api-client";
 import { getFinanceSummary } from "@/lib/finance";
+import { bookingUdhari, getUdhariSummary } from "@/lib/udhari";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore } from "@/lib/types";
 import {
@@ -56,8 +57,11 @@ export default function AdminDashboardPage() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
+  const udhari = getUdhariSummary(store.bookings);
+
   const quickLinks = [
     { href: "/admin/bookings", label: "Approve pending bookings" },
+    { href: "/admin/udhari", label: "Udhari — who owes how much" },
     { href: "/admin/inventory", label: "Ball stock & purchases" },
     { href: "/admin/diesel", label: "Diesel expenses" },
     { href: "/admin/finance", label: "Full profit & loss" },
@@ -83,11 +87,32 @@ export default function AdminDashboardPage() {
         <StatCard label="Approved Bookings" value={approved} icon={Users} color="#1f8a3c" />
         <StatCard label="Today's Matches" value={todayBookings} icon={Calendar} color="#1e3d73" />
         <StatCard
-          label="Last Month Net"
-          value={formatCurrency(finance.lastMonth.netProfit)}
+          label="Total Udhari Pending"
+          value={formatCurrency(udhari.totalUdhari)}
           icon={IndianRupee}
-          color={finance.lastMonth.netProfit >= 0 ? "#1f8a3c" : "#e31837"}
+          color="#e31837"
+          trend={udhari.countWithUdhari > 0 ? `${udhari.countWithUdhari} unpaid` : "All clear"}
         />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3 mb-6">
+        <Card className="!p-4 border-l-4 border-l-green-500">
+          <p className="text-xs text-slate-500">Cash received (bookings)</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{formatCurrency(udhari.totalReceived)}</p>
+        </Card>
+        <Card className="!p-4">
+          <p className="text-xs text-slate-500">Billed (approved sessions)</p>
+          <p className="text-xl font-bold text-[var(--navy)] mt-1">{formatCurrency(udhari.totalBilled)}</p>
+        </Card>
+        <Card className="!p-4 border-l-4 border-l-red-500">
+          <p className="text-xs text-slate-500 flex items-center justify-between">
+            Outstanding udhari
+            <Link href="/admin/udhari" className="text-[var(--brand-red)] text-xs font-semibold hover:underline">
+              View all
+            </Link>
+          </p>
+          <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(udhari.totalUdhari)}</p>
+        </Card>
       </div>
 
       <div className="space-y-6 mb-8">
@@ -163,6 +188,11 @@ export default function AdminDashboardPage() {
                   <div className="text-right">
                     <Badge status={b.status} theme="light" />
                     <p className="text-xs font-semibold text-[var(--brand-red)] mt-1">{formatCurrency(b.slotPrice)}</p>
+                    {b.status === "approved" && bookingUdhari(b) > 0 && (
+                      <p className="text-[10px] text-amber-700 font-semibold">
+                        Udhari {formatCurrency(bookingUdhari(b))}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))

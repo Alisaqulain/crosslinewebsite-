@@ -13,15 +13,17 @@ import {
   fetchAdminStore,
   fetchBookings,
   patchBooking,
+  deleteBooking,
 } from "@/lib/api-client";
-import { firstAvailableQuality, getAvailableBalls } from "@/lib/ball-stock";
+import { getAvailableBalls, normalizeBallQuality } from "@/lib/ball-stock";
 import { getBallStock } from "@/lib/finance";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { isSessionActiveOnDate } from "@/lib/slots";
+import { getQualityLabel } from "@/lib/qualities";
+import { bookingAmountReceived, bookingUdhari } from "@/lib/udhari";
 import type { AppStore, BallQuality, Booking, BookingStatus, TimeSlot } from "@/lib/types";
-import { BALL_QUALITY_LABELS } from "@/lib/types";
-import { Check, X, Loader2, Package, Plus } from "lucide-react";
+import { Check, X, Loader2, Package, Plus, IndianRupee, Save, Trash2 } from "lucide-react";
 
 function parseBallQuantity(value: string, max: number): number {
   if (value.trim() === "") return 0;
@@ -58,7 +60,10 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [approveTarget, setApproveTarget] = useState<Booking | null>(null);
-  const [ballQuality, setBallQuality] = useState<BallQuality>("high");
+  const [ballTarget, setBallTarget] = useState<Booking | null>(null);
+  const [payTarget, setPayTarget] = useState<Booking | null>(null);
+  const [amountReceivedInput, setAmountReceivedInput] = useState("");
+  const [ballQuality, setBallQuality] = useState<BallQuality>("");
   const [ballsUsed, setBallsUsed] = useState(0);
   const [assignBalls, setAssignBalls] = useState(false);
   const [walkInAssignBalls, setWalkInAssignBalls] = useState(false);
@@ -72,8 +77,9 @@ export default function AdminBookingsPage() {
     date: new Date().toISOString().split("T")[0],
     slotId: "",
     numberOfPlayers: 11,
-    ballQuality: "high" as BallQuality,
+    ballQuality: "" as BallQuality,
     ballsUsed: 0,
+    amountReceived: "" as string | number,
   });
 
   const load = useCallback(async () => {
@@ -101,9 +107,9 @@ export default function AdminBookingsPage() {
 
   const slots: TimeSlot[] =
     store?.slots.filter((s) => s.available && isSessionActiveOnDate(s, walkIn.date)) ?? [];
-  const availableForApprove =
-    store && approveTarget
-      ? getAvailableBalls(store, ballQuality, approveTarget.id)
+  const availableForBalls =
+    store && ballTarget
+      ? getAvailableBalls(store, ballQuality, ballTarget.id)
       : store
         ? getBallStock(store).find((s) => s.quality === ballQuality)?.remaining ?? 0
         : 0;
@@ -111,63 +117,93 @@ export default function AdminBookingsPage() {
 
   const openApprove = (b: Booking) => {
     setApproveTarget(b);
+  };
+
+  const openBallAssign = (b: Booking) => {
+    setBallTarget(b);
     const hadBalls = (b.ballsUsed ?? 0) > 0;
     setAssignBalls(hadBalls);
-    const preferred = b.ballQuality ?? "high";
-    const quality =
-      store && firstAvailableQuality(store, b.id, preferred)
-        ? firstAvailableQuality(store, b.id, preferred)!
-        : preferred;
-    setBallQuality(quality);
+    setBallQuality(b.ballQuality ?? "");
     setBallsUsed(hadBalls ? (b.ballsUsed ?? 0) : 0);
   };
 
-  useEffect(() => {
-    if (!store || !approveTarget || !assignBalls) return;
-    const available = getAvailableBalls(store, ballQuality, approveTarget.id);
-    if (available === 0) {
-      const next = firstAvailableQuality(store, approveTarget.id, ballQuality);
-      if (next) setBallQuality(next);
-    }
-  }, [store, approveTarget, ballQuality, assignBalls]);
-
-  useEffect(() => {
-    if (!store || !showWalkIn || !walkInAssignBalls) return;
-    const available = getAvailableBalls(store, walkIn.ballQuality);
-    if (available === 0) {
-      const next = firstAvailableQuality(store, undefined, walkIn.ballQuality);
-      if (next) setWalkIn((w) => ({ ...w, ballQuality: next }));
-    }
-  }, [store, showWalkIn, walkIn.ballQuality, walkInAssignBalls]);
-
   const confirmApprove = async () => {
     if (!approveTarget) return;
-    const qty = assignBalls ? ballsUsed : 0;
-    if (assignBalls && qty > 0 && qty > availableForApprove) {
-      toast(`Only ${availableForApprove} balls available`, "error");
-      return;
-    }
-    if (assignBalls && qty > 0 && availableForApprove === 0) {
-      toast("No stock for this quality — choose another or use no balls", "error");
-      return;
-    }
     setActionId(approveTarget.id);
     try {
-      const payload: Record<string, unknown> = {
-        ballsUsed: qty,
-        ballQuality: assignBalls && qty > 0 ? ballQuality : null,
-      };
-      if (approveTarget.status === "pending") payload.status = "approved";
-      await patchBooking(approveTarget.id, payload);
+      await patchBooking(approveTarget.id, { status: "approved" });
+      toast("Booking approved — assign balls after the match is played", "success");
+      setApproveTarget(null);
+      load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Approve failed", "error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const openPayment = (b: Booking) => {
+    setPayTarget(b);
+    setAmountReceivedInput(String(bookingAmountReceived(b) || ""));
+  };
+
+  const confirmPayment = async () => {
+    if (!payTarget) return;
+    const received = Number(amountReceivedInput);
+    if (Number.isNaN(received) || received < 0) {
+      toast("Enter a valid amount", "error");
+      return;
+    }
+    if (received > payTarget.slotPrice) {
+      toast(`Cannot exceed ${formatCurrency(payTarget.slotPrice)}`, "error");
+      return;
+    }
+    setActionId(payTarget.id);
+    try {
+      await patchBooking(payTarget.id, { recordPayment: true, amountReceived: received });
+      const left = payTarget.slotPrice - received;
       toast(
-        qty > 0
-          ? `${approveTarget.status === "pending" ? "Approved" : "Updated"} — ${qty} ${BALL_QUALITY_LABELS[ballQuality]} ball(s)`
-          : approveTarget.status === "pending"
-            ? "Booking approved (no balls used)"
-            : "Balls cleared",
+        left > 0 ? `Saved — ${formatCurrency(left)} udhari` : "Full payment recorded",
         "success"
       );
-      setApproveTarget(null);
+      setPayTarget(null);
+      load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Save failed", "error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const confirmBallAssign = async () => {
+    if (!ballTarget || !store) return;
+    const qty = assignBalls ? ballsUsed : 0;
+    if (assignBalls && qty > 0 && !normalizeBallQuality(ballQuality)) {
+      toast("Enter ball quality name", "error");
+      return;
+    }
+    if (assignBalls && qty > 0 && qty > availableForBalls) {
+      toast(`Only ${availableForBalls} balls available`, "error");
+      return;
+    }
+    if (assignBalls && qty > 0 && availableForBalls === 0) {
+      toast("No stock for this quality", "error");
+      return;
+    }
+    setActionId(ballTarget.id);
+    try {
+      await patchBooking(ballTarget.id, {
+        assignBalls: true,
+        ballsUsed: qty,
+        ballQuality: assignBalls && qty > 0 ? normalizeBallQuality(ballQuality) : null,
+      });
+      toast(
+        qty > 0
+          ? `Assigned ${qty} ${getQualityLabel(store, ballQuality)} ball(s)`
+          : "Ball assignment cleared",
+        "success"
+      );
+      setBallTarget(null);
       load();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Update failed", "error");
@@ -176,10 +212,30 @@ export default function AdminBookingsPage() {
     }
   };
 
+  const removeBooking = async (b: Booking) => {
+    if (
+      !confirm(
+        `Delete booking ${b.id}?\n\n${b.customerName} · ${formatDate(b.date)} · ${b.slotLabel}\n\nThis frees the slot and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setActionId(b.id);
+    try {
+      await deleteBooking(b.id);
+      toast("Booking deleted", "success");
+      load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Delete failed", "error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
   const updateStatus = async (id: string, status: BookingStatus) => {
     setActionId(id);
     try {
-      await patchBooking(id, { status, ballsUsed: 0 });
+      await patchBooking(id, { status });
       toast(`Booking ${status}`, "success");
       load();
     } catch (err) {
@@ -204,8 +260,15 @@ export default function AdminBookingsPage() {
         slotId: walkIn.slotId,
         numberOfPlayers: walkIn.numberOfPlayers,
         matchType: "friendly",
-        ballQuality: walkInAssignBalls && walkIn.ballsUsed > 0 ? walkIn.ballQuality : undefined,
+        ballQuality:
+          walkInAssignBalls && walkIn.ballsUsed > 0
+            ? normalizeBallQuality(walkIn.ballQuality)
+            : undefined,
         ballsUsed: walkInAssignBalls ? walkIn.ballsUsed : 0,
+        amountReceived:
+          walkIn.amountReceived !== "" && walkIn.amountReceived !== undefined
+            ? Number(walkIn.amountReceived)
+            : undefined,
       });
       toast("Direct booking saved — stock updated", "success");
       setShowWalkIn(false);
@@ -217,8 +280,9 @@ export default function AdminBookingsPage() {
         date: new Date().toISOString().split("T")[0],
         slotId: slots[0]?.id ?? "",
         numberOfPlayers: 11,
-        ballQuality: "high",
+        ballQuality: "",
         ballsUsed: 0,
+        amountReceived: "",
       });
       setWalkInAssignBalls(false);
       load();
@@ -301,6 +365,37 @@ export default function AdminBookingsPage() {
                 ))}
               </Select>
             </div>
+            <div>
+              <Label>Amount received (₹)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={slots.find((s) => s.id === walkIn.slotId)?.price}
+                value={walkIn.amountReceived}
+                onChange={(e) => setWalkIn({ ...walkIn, amountReceived: e.target.value })}
+                placeholder="e.g. 4000"
+                className="mt-1"
+              />
+              {walkIn.slotId && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Session {formatCurrency(slots.find((s) => s.id === walkIn.slotId)?.price ?? 0)}
+                  {walkIn.amountReceived !== "" &&
+                    !Number.isNaN(Number(walkIn.amountReceived)) && (
+                      <>
+                        {" "}
+                        · Udhari{" "}
+                        {formatCurrency(
+                          Math.max(
+                            0,
+                            (slots.find((s) => s.id === walkIn.slotId)?.price ?? 0) -
+                              Number(walkIn.amountReceived)
+                          )
+                        )}
+                      </>
+                    )}
+                </p>
+              )}
+            </div>
             <div className="sm:col-span-2 space-y-2 p-3 rounded-xl admin-subtle border border-[var(--border)]">
               <p className="text-xs font-semibold text-[var(--navy)]">Stadium balls</p>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -326,7 +421,7 @@ export default function AdminBookingsPage() {
             {walkInAssignBalls && (
               <>
                 <div>
-                  <Label>Ball quality</Label>
+                  <Label>Ball quality (type name)</Label>
                   <BallQualitySelect
                     store={store}
                     value={walkIn.ballQuality}
@@ -350,7 +445,7 @@ export default function AdminBookingsPage() {
                     }
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    {availableWalkIn} {BALL_QUALITY_LABELS[walkIn.ballQuality]} available
+                    {availableWalkIn} {getQualityLabel(store, walkIn.ballQuality)} available
                   </p>
                 </div>
               </>
@@ -399,14 +494,81 @@ export default function AdminBookingsPage() {
         </div>
       </div>
 
-      {approveTarget && store && (
+      {approveTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <Card className="w-full max-w-md space-y-4 shadow-xl">
-            <h3 className="font-semibold text-[var(--navy)]">
-              {approveTarget.status === "pending" ? "Approve booking" : "Edit booking"}
-            </h3>
+            <h3 className="font-semibold text-[var(--navy)]">Approve booking</h3>
             <p className="text-sm text-slate-600">
               {approveTarget.teamName} · {formatDate(approveTarget.date)} · {approveTarget.slotLabel}
+            </p>
+            <p className="text-sm text-slate-500 rounded-xl admin-subtle p-3 border border-[var(--border)]">
+              This session will be locked for this date. Other pending requests for the same
+              session will be rejected automatically. Assign balls later after the match is played.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setApproveTarget(null)}>
+                Cancel
+              </Button>
+              <Button onClick={confirmApprove} disabled={actionId === approveTarget.id}>
+                Approve booking
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {payTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <Card className="w-full max-w-md space-y-4 shadow-xl">
+            <h3 className="font-semibold text-[var(--navy)] flex items-center gap-2">
+              <IndianRupee className="h-5 w-5 text-amber-600" />
+              Amount received
+            </h3>
+            <p className="text-sm text-slate-600">
+              {payTarget.customerName} · {payTarget.teamName}
+              <br />
+              {formatDate(payTarget.date)} · {formatCurrency(payTarget.slotPrice)} total
+            </p>
+            <div>
+              <Label>Received (₹)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={payTarget.slotPrice}
+                value={amountReceivedInput}
+                onChange={(e) => setAmountReceivedInput(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs mt-1 text-slate-500">
+                Udhari:{" "}
+                <strong className="text-red-600">
+                  {formatCurrency(
+                    Math.max(
+                      0,
+                      payTarget.slotPrice - (Number(amountReceivedInput) || 0)
+                    )
+                  )}
+                </strong>
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setPayTarget(null)}>
+                Cancel
+              </Button>
+              <Button onClick={confirmPayment} disabled={actionId === payTarget.id}>
+                <Save className="h-4 w-4" /> Save
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {ballTarget && store && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <Card className="w-full max-w-md space-y-4 shadow-xl">
+            <h3 className="font-semibold text-[var(--navy)]">Assign balls (after match)</h3>
+            <p className="text-sm text-slate-600">
+              {ballTarget.teamName} · {formatDate(ballTarget.date)} · {ballTarget.slotLabel}
             </p>
 
             <div className="space-y-2 p-3 rounded-xl admin-subtle border border-[var(--border)]">
@@ -423,7 +585,7 @@ export default function AdminBookingsPage() {
                     setBallsUsed(0);
                   }}
                 />
-                <span className="text-sm text-[var(--navy)]">No balls from stock (teams bring own)</span>
+                <span className="text-sm text-[var(--navy)]">No balls from stock</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -432,52 +594,48 @@ export default function AdminBookingsPage() {
                   checked={assignBalls}
                   onChange={() => setAssignBalls(true)}
                 />
-                <span className="text-sm text-[var(--navy)]">Assign balls from stock</span>
+                <span className="text-sm text-[var(--navy)]">Deduct balls from stock</span>
               </label>
             </div>
 
             {assignBalls && (
               <div className="space-y-3 pl-1 border-l-2 border-[#F7931E] ml-1">
                 <div>
-                  <Label>Ball quality</Label>
+                  <Label>Ball quality (type name)</Label>
                   <BallQualitySelect
                     store={store}
                     value={ballQuality}
                     onChange={setBallQuality}
-                    excludeBookingId={approveTarget.id}
+                    excludeBookingId={ballTarget.id}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label>How many balls? (leave 0 if none)</Label>
+                  <Label>How many balls?</Label>
                   <Input
                     type="number"
                     min={0}
-                    max={availableForApprove || undefined}
+                    max={availableForBalls || undefined}
                     value={ballsUsed === 0 ? "" : String(ballsUsed)}
                     placeholder="0"
                     onChange={(e) =>
-                      setBallsUsed(parseBallQuantity(e.target.value, availableForApprove))
+                      setBallsUsed(parseBallQuantity(e.target.value, availableForBalls))
                     }
                     className="mt-1"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    {availableForApprove} {BALL_QUALITY_LABELS[ballQuality]} available
-                    {ballsUsed > 0 ? ` · ${availableForApprove - ballsUsed} left after` : ""}
+                    {availableForBalls} {getQualityLabel(store, ballQuality)} available
                   </p>
                 </div>
               </div>
             )}
 
             <div className="flex gap-2 justify-end">
-              <Button variant="ghost" onClick={() => setApproveTarget(null)}>
+              <Button variant="ghost" onClick={() => setBallTarget(null)}>
                 Cancel
               </Button>
-              <Button
-                onClick={confirmApprove}
-                disabled={actionId === approveTarget.id}
-              >
-                {approveTarget.status === "pending" ? "Approve" : "Save"}
+              <Button onClick={confirmBallAssign} disabled={actionId === ballTarget.id}>
+                Save balls
               </Button>
             </div>
           </Card>
@@ -543,9 +701,9 @@ export default function AdminBookingsPage() {
                 key: "balls",
                 header: "Balls",
                 render: (b) =>
-                  b.ballsUsed && b.ballQuality ? (
+                  b.ballsUsed && b.ballQuality && store ? (
                     <span className="text-xs font-medium text-[var(--navy)]">
-                      {BALL_QUALITY_LABELS[b.ballQuality]} × {b.ballsUsed}
+                      {getQualityLabel(store, b.ballQuality)} × {b.ballsUsed}
                     </span>
                   ) : (
                     <span className="text-xs text-slate-400">—</span>
@@ -553,8 +711,21 @@ export default function AdminBookingsPage() {
               },
               {
                 key: "amount",
-                header: "Price",
-                render: (b) => formatCurrency(b.slotPrice),
+                header: "Price / Payment",
+                render: (b) =>
+                  b.status === "approved" ? (
+                    <div className="text-xs">
+                      <p className="font-medium text-[var(--navy)]">{formatCurrency(b.slotPrice)}</p>
+                      <p className="text-green-700">Rcvd {formatCurrency(bookingAmountReceived(b))}</p>
+                      {bookingUdhari(b) > 0 ? (
+                        <p className="text-red-600 font-semibold">Udhari {formatCurrency(bookingUdhari(b))}</p>
+                      ) : (
+                        <p className="text-slate-400">Paid</p>
+                      )}
+                    </div>
+                  ) : (
+                    formatCurrency(b.slotPrice)
+                  ),
               },
               {
                 key: "status",
@@ -564,39 +735,66 @@ export default function AdminBookingsPage() {
               {
                 key: "actions",
                 header: "Actions",
-                render: (b) =>
-                  b.status === "pending" ? (
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={actionId === b.id}
-                        onClick={() => openApprove(b)}
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        disabled={actionId === b.id}
-                        onClick={() => updateStatus(b.id, "rejected")}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ) : b.status === "approved" ? (
+                render: (b) => (
+                  <div className="flex flex-col gap-1 items-end">
+                    {b.status === "pending" && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={actionId === b.id}
+                          onClick={() => openApprove(b)}
+                          title="Approve"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={actionId === b.id}
+                          onClick={() => updateStatus(b.id, "rejected")}
+                          title="Reject"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                    {b.status === "approved" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                          disabled={actionId === b.id}
+                          onClick={() => openPayment(b)}
+                        >
+                          <IndianRupee className="h-3 w-3" />
+                          Amount received
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs"
+                          disabled={actionId === b.id}
+                          onClick={() => openBallAssign(b)}
+                        >
+                          Assign balls
+                        </Button>
+                      </>
+                    )}
                     <Button
                       size="sm"
-                      variant="ghost"
+                      variant="danger"
                       className="text-xs"
                       disabled={actionId === b.id}
-                      onClick={() => openApprove(b)}
+                      onClick={() => removeBooking(b)}
+                      title="Delete booking"
                     >
-                      Edit balls
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
                     </Button>
-                  ) : (
-                    <span className="text-slate-500 text-xs">—</span>
-                  ),
+                  </div>
+                ),
               },
             ]}
           />

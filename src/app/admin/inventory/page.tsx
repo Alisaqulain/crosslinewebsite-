@@ -9,14 +9,14 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label, Select } from "@/components/ui/Input";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
-import { getAvailableBalls } from "@/lib/ball-stock";
+import { getAvailableBalls, normalizeBallQuality } from "@/lib/ball-stock";
 import { getBallStock } from "@/lib/finance";
+import { getQualityLabel } from "@/lib/qualities";
 import type { AppStore, BallPurchase, BallQuality, BallUsage } from "@/lib/types";
-import { BALL_QUALITY_LABELS } from "@/lib/types";
 import { Package, ArrowDown, ArrowUp, Loader2, Save, Search } from "lucide-react";
 
 const emptyPurchase = () => ({
-  quality: "high" as BallQuality,
+  quality: "" as BallQuality,
   quantity: 0,
   purchasePrice: 0,
   date: new Date().toISOString().split("T")[0],
@@ -26,7 +26,7 @@ const emptyPurchase = () => ({
 
 const emptyUsage = () => ({
   matchName: "",
-  quality: "high" as BallQuality,
+  quality: "" as BallQuality,
   quantity: 0,
   date: new Date().toISOString().split("T")[0],
   notes: "",
@@ -78,11 +78,11 @@ export default function AdminInventoryPage() {
       (p) =>
         p.supplier.toLowerCase().includes(q) ||
         p.date.includes(q) ||
-        BALL_QUALITY_LABELS[p.quality].toLowerCase().includes(q) ||
+        (store ? getQualityLabel(store, p.quality) : p.quality).toLowerCase().includes(q) ||
         String(p.purchasePrice).includes(q) ||
         (p.notes ?? "").toLowerCase().includes(q)
     );
-  }, [purchases, q]);
+  }, [purchases, q, store]);
 
   const filteredUsage = useMemo(() => {
     if (!q) return usage;
@@ -90,26 +90,28 @@ export default function AdminInventoryPage() {
       (u) =>
         u.matchName.toLowerCase().includes(q) ||
         u.date.includes(q) ||
-        BALL_QUALITY_LABELS[u.quality].toLowerCase().includes(q) ||
+        (store ? getQualityLabel(store, u.quality) : u.quality).toLowerCase().includes(q) ||
         (u.notes ?? "").toLowerCase().includes(q)
     );
-  }, [usage, q]);
+  }, [usage, q, store]);
 
   const savePurchase = () => {
-    if (!purchaseForm.quantity || !purchaseForm.supplier) {
-      toast("Fill quantity and supplier", "error");
+    const quality = normalizeBallQuality(purchaseForm.quality);
+    if (!quality || !purchaseForm.quantity || !purchaseForm.supplier) {
+      toast("Fill quality name, quantity and supplier", "error");
       return;
     }
+    const payload = { ...purchaseForm, quality };
     if (editingPurchaseId) {
       const next = purchases.map((p) =>
-        p.id === editingPurchaseId ? { ...p, ...purchaseForm } : p
+        p.id === editingPurchaseId ? { ...p, ...payload } : p
       );
       save("ballPurchases", next);
       setEditingPurchaseId(null);
     } else {
       const entry: BallPurchase = {
         id: `BP-${Date.now().toString(36).toUpperCase()}`,
-        ...purchaseForm,
+        ...payload,
       };
       save("ballPurchases", [entry, ...purchases]);
     }
@@ -119,25 +121,27 @@ export default function AdminInventoryPage() {
 
   const saveUsageEntry = () => {
     if (!store) return;
-    if (!usageForm.matchName || !usageForm.quantity) {
-      toast("Fill match name and quantity", "error");
+    const quality = normalizeBallQuality(usageForm.quality);
+    if (!quality || !usageForm.matchName || !usageForm.quantity) {
+      toast("Fill quality name, match name and quantity", "error");
       return;
     }
-    const available = getAvailableBalls(store, usageForm.quality, undefined, editingUsageId ?? undefined);
+    const available = getAvailableBalls(store, quality, undefined, editingUsageId ?? undefined);
     if (available < usageForm.quantity) {
-      toast(`Insufficient ${BALL_QUALITY_LABELS[usageForm.quality]} stock`, "error");
+      toast(`Insufficient "${quality}" stock`, "error");
       return;
     }
+    const payload = { ...usageForm, quality };
     if (editingUsageId) {
       const next = usage.map((u) =>
-        u.id === editingUsageId ? { ...u, ...usageForm } : u
+        u.id === editingUsageId ? { ...u, ...payload } : u
       );
       save("ballUsage", next);
       setEditingUsageId(null);
     } else {
       const entry: BallUsage = {
         id: `BU-${Date.now().toString(36).toUpperCase()}`,
-        ...usageForm,
+        ...payload,
       };
       save("ballUsage", [entry, ...usage]);
     }
@@ -224,6 +228,11 @@ export default function AdminInventoryPage() {
         </div>
       </div>
 
+      <p className="text-sm text-slate-600 mb-6">
+        Type ball quality as free text when adding stock or assigning balls (e.g. Tonk, Practice, Match).
+        Use the same spelling each time so stock counts match.
+      </p>
+
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         {stock.map((item) => (
           <Card key={item.quality} hover>
@@ -279,22 +288,21 @@ export default function AdminInventoryPage() {
         </Button>
       </div>
 
-      {showPurchase && (
+      {showPurchase && store && (
         <Card className="mb-6 space-y-3">
           <h3 className="font-semibold text-[var(--navy)]">
             {editingPurchaseId ? "Edit Purchase" : "New Purchase Entry"}
           </h3>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <Label>Ball Quality</Label>
-              <Select
+              <Label>Ball quality (type name)</Label>
+              <BallQualitySelect
+                store={store}
                 value={purchaseForm.quality}
-                onChange={(e) => setPurchaseForm({ ...purchaseForm, quality: e.target.value as BallQuality })}
-              >
-                <option value="low">Low Quality</option>
-                <option value="medium">Medium Quality</option>
-                <option value="high">High Quality</option>
-              </Select>
+                onChange={(quality) => setPurchaseForm({ ...purchaseForm, quality })}
+                className="mt-1"
+                placeholder="e.g. Tonk, Practice"
+              />
             </div>
             <div>
               <Label>Supplier / Source</Label>
@@ -342,12 +350,13 @@ export default function AdminInventoryPage() {
               <Input value={usageForm.matchName} onChange={(e) => setUsageForm({ ...usageForm, matchName: e.target.value })} placeholder="Lions vs Tigers" />
             </div>
             <div>
-              <Label>Ball Quality</Label>
+              <Label>Ball quality (type name)</Label>
               <BallQualitySelect
                 store={store}
                 value={usageForm.quality}
                 onChange={(quality) => setUsageForm({ ...usageForm, quality })}
                 excludeUsageId={editingUsageId ?? undefined}
+                placeholder="e.g. Tonk, Match ball"
               />
             </div>
             <div>
@@ -397,7 +406,7 @@ export default function AdminInventoryPage() {
                 <div key={p.id} className="flex items-start justify-between gap-2 p-3 rounded-lg admin-subtle">
                   <div className="min-w-0">
                     <p className="font-semibold text-[var(--navy)]">
-                      {BALL_QUALITY_LABELS[p.quality]} × {p.quantity}
+                      {store ? getQualityLabel(store, p.quality) : p.quality} × {p.quantity}
                     </p>
                     <p className="text-xs text-slate-500">
                       {p.date} · {p.supplier} · ₹{p.purchasePrice}
@@ -420,7 +429,7 @@ export default function AdminInventoryPage() {
                 <div key={u.id} className="flex items-start justify-between gap-2 p-3 rounded-lg admin-subtle">
                   <div className="min-w-0">
                     <p className="font-semibold text-[var(--navy)]">
-                      {u.matchName} — {BALL_QUALITY_LABELS[u.quality]} × {u.quantity}
+                      {u.matchName} — {store ? getQualityLabel(store, u.quality) : u.quality} × {u.quantity}
                     </p>
                     <p className="text-xs text-slate-500">
                       {u.date}

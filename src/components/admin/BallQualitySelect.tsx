@@ -1,9 +1,10 @@
 "use client";
 
-import { Select } from "@/components/ui/Input";
+import { Input } from "@/components/ui/Input";
 import type { AppStore, BallQuality } from "@/lib/types";
-import { getBallQualityOptions } from "@/lib/ball-stock";
+import { getAvailableBalls } from "@/lib/ball-stock";
 
+/** Free-text ball quality (replaces dropdown). */
 export function BallQualitySelect({
   store,
   value,
@@ -11,6 +12,7 @@ export function BallQualitySelect({
   excludeBookingId,
   excludeUsageId,
   className,
+  placeholder = "e.g. Practice, Tonk, Match ball",
 }: {
   store: AppStore;
   value: BallQuality;
@@ -18,20 +20,34 @@ export function BallQualitySelect({
   excludeBookingId?: string;
   excludeUsageId?: string;
   className?: string;
+  placeholder?: string;
 }) {
-  const options = getBallQualityOptions(store, excludeBookingId, excludeUsageId);
+  const trimmed = value.trim();
+  const available = trimmed
+    ? getAvailableBalls(store, trimmed, excludeBookingId, excludeUsageId)
+    : 0;
 
   return (
-    <Select
-      value={value}
-      onChange={(e) => onChange(e.target.value as BallQuality)}
-      className={className}
-    >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-          {opt.label} — {opt.available} available{opt.disabled ? " (out of stock)" : ""}
-        </option>
-      ))}
-    </Select>
+    <div>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={className}
+      />
+      {trimmed ? (
+        <p className="text-xs text-slate-500 mt-1">
+          {available > 0 ? (
+            <>
+              <strong>{available}</strong> in stock for &quot;{trimmed}&quot;
+            </>
+          ) : (
+            <span className="text-amber-700">
+              No stock for &quot;{trimmed}&quot; — add purchase in Ball Stock first
+            </span>
+          )}
+        </p>
+      ) : null}
+    </div>
   );
 }

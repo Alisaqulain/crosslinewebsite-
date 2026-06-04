@@ -94,6 +94,16 @@ export async function patchBooking(id: string, data: Record<string, unknown>) {
   return json;
 }
 
+export async function deleteBooking(id: string) {
+  const res = await fetch(`/api/bookings/${id}`, {
+    method: "DELETE",
+    headers: adminHeaders(),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Delete failed");
+  return json;
+}
+
 export async function fetchBookings(params?: { status?: string; date?: string }) {
   const q = new URLSearchParams();
   if (params?.status) q.set("status", params.status);

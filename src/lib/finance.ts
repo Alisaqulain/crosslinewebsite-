@@ -1,5 +1,6 @@
 import type { AppStore, BallQuality, FinanceEntry, ShiftCategory } from "./types";
-import { BALL_QUALITY_LABELS } from "./types";
+import { getQualityLabel, resolveBallQualities } from "./qualities";
+import { getUdhariSummary } from "./udhari";
 
 function bookingShift(store: AppStore, slotId: string): ShiftCategory {
   const slot = store.slots.find((s) => s.id === slotId);
@@ -17,9 +18,11 @@ export interface BallStockSummary {
 }
 
 export function getBallStock(store: AppStore): BallStockSummary[] {
-  const qualities: BallQuality[] = ["low", "medium", "high"];
+  const knownIds = new Set(resolveBallQualities(store).map((q) => q.id));
+  for (const p of store.ballPurchases) knownIds.add(p.quality);
+  for (const u of store.ballUsage) knownIds.add(u.quality);
 
-  return qualities.map((quality) => {
+  return [...knownIds].map((quality) => {
     const purchased = store.ballPurchases
       .filter((p) => p.quality === quality)
       .reduce((s, p) => s + p.quantity, 0);
@@ -28,7 +31,7 @@ export function getBallStock(store: AppStore): BallStockSummary[] {
       .reduce((s, u) => s + u.quantity, 0);
     return {
       quality,
-      label: BALL_QUALITY_LABELS[quality],
+      label: getQualityLabel(store, quality),
       remaining: purchased - used,
       purchased,
       used,
@@ -49,6 +52,7 @@ export interface PeriodFinance {
     total: number;
     diesel: number;
     ballPurchase: number;
+    other: number;
     manual: number;
   };
   netProfit: number;
@@ -93,12 +97,15 @@ function computePeriodFinance(store: AppStore, monthKey: string, label: string):
   const ballPurchase = store.ballPurchases
     .filter((p) => inMonth(p.date, monthKey))
     .reduce((s, p) => s + p.purchasePrice, 0);
+  const other = (store.otherExpenses ?? [])
+    .filter((o) => inMonth(o.date, monthKey))
+    .reduce((s, o) => s + o.amount, 0);
   const manualExpense = store.financeEntries
     .filter((e) => e.type === "expense" && inMonth(e.date, monthKey))
     .reduce((s, e) => s + e.amount, 0);
 
   const incomeTotal = onlineBooking + walkInBooking + manualIncome;
-  const expenseTotal = diesel + ballPurchase + manualExpense;
+  const expenseTotal = diesel + ballPurchase + other + manualExpense;
 
   return {
     label,
@@ -113,6 +120,7 @@ function computePeriodFinance(store: AppStore, monthKey: string, label: string):
       total: expenseTotal,
       diesel,
       ballPurchase,
+      other,
       manual: manualExpense,
     },
     netProfit: incomeTotal - expenseTotal,
@@ -133,6 +141,7 @@ export function getFinanceSummary(store: AppStore) {
 
   const dieselTotal = store.dieselExpenses.reduce((s, d) => s + d.totalCost, 0);
   const ballPurchaseTotal = store.ballPurchases.reduce((s, p) => s + p.purchasePrice, 0);
+  const otherExpenseTotal = (store.otherExpenses ?? []).reduce((s, o) => s + o.amount, 0);
 
   const manualIncome = store.financeEntries
     .filter((e) => e.type === "income")
@@ -142,7 +151,7 @@ export function getFinanceSummary(store: AppStore) {
     .reduce((s, e) => s + e.amount, 0);
 
   const totalIncome = bookingIncome + manualIncome;
-  const totalExpense = dieselTotal + ballPurchaseTotal + manualExpense;
+  const totalExpense = dieselTotal + ballPurchaseTotal + otherExpenseTotal + manualExpense;
 
   const sumBy = (entries: FinanceEntry[], pred: (e: FinanceEntry) => boolean) =>
     entries.filter(pred).reduce((s, e) => s + e.amount, 0);
@@ -166,10 +175,21 @@ export function getFinanceSummary(store: AppStore) {
     .filter((d) => d.shift === "night")
     .reduce((s, d) => s + d.totalCost, 0);
 
+  const dayOther = (store.otherExpenses ?? [])
+    .filter((o) => o.shift === "day")
+    .reduce((s, o) => s + o.amount, 0);
+  const nightOther = (store.otherExpenses ?? [])
+    .filter((o) => o.shift === "night")
+    .reduce((s, o) => s + o.amount, 0);
+
   const dayExpense =
-    sumBy(store.financeEntries, (e) => e.type === "expense" && e.shift === "day") + dayDiesel;
+    sumBy(store.financeEntries, (e) => e.type === "expense" && e.shift === "day") +
+    dayDiesel +
+    dayOther;
   const nightExpense =
-    sumBy(store.financeEntries, (e) => e.type === "expense" && e.shift === "night") + nightDiesel;
+    sumBy(store.financeEntries, (e) => e.type === "expense" && e.shift === "night") +
+    nightDiesel +
+    nightOther;
 
   const dayNetProfit = dayIncome - dayExpense;
   const nightNetProfit = nightIncome - nightExpense;
@@ -194,6 +214,8 @@ export function getFinanceSummary(store: AppStore) {
   const monthlyIncome = thisMonth.income.total;
   const monthlyExpense = thisMonth.expense.total;
 
+  const udhari = getUdhariSummary(store.bookings);
+
   const recentTransactions = [
     ...store.financeEntries.map((e) => ({
       id: e.id,
@@ -212,6 +234,15 @@ export function getFinanceSummary(store: AppStore) {
       amount: d.totalCost,
       note: d.purpose,
       shift: d.shift,
+    })),
+    ...(store.otherExpenses ?? []).map((o) => ({
+      id: o.id,
+      date: o.date,
+      type: "expense" as const,
+      category: o.category,
+      amount: o.amount,
+      note: o.title,
+      shift: o.shift,
     })),
     ...store.bookings
       .filter((b) => b.status === "approved")
@@ -244,6 +275,7 @@ export function getFinanceSummary(store: AppStore) {
     bookingNightIncome,
     dieselTotal,
     ballPurchaseTotal,
+    otherExpenseTotal,
     bookingIncome,
     allTimeWalkInIncome,
     allTimeOnlineIncome,
@@ -254,5 +286,6 @@ export function getFinanceSummary(store: AppStore) {
     recentTransactions,
     ballStock: getBallStock(store),
     totalBallsRemaining: getBallStock(store).reduce((s, b) => s + b.remaining, 0),
+    udhari,
   };
 }

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { readStore, updateStore, generateId } from "@/lib/db";
 import { isAdminRequest, unauthorized } from "@/lib/auth";
 import { sendEmail, bookingReceivedEmail } from "@/lib/email";
-import { hasApprovedBooking, isSlotAvailableForUser } from "@/lib/slots";
+import { isSlotAvailableForUser } from "@/lib/slots";
 import type { BallQuality, Booking, MatchType } from "@/lib/types";
-import { upsertBallUsageForBooking } from "@/lib/ball-stock";
+import { normalizeBallQuality, upsertBallUsageForBooking } from "@/lib/ball-stock";
 
 export async function GET(req: NextRequest) {
   if (!isAdminRequest(req)) return unauthorized();
@@ -37,12 +37,17 @@ export async function POST(req: NextRequest) {
     if (!isSlotAvailableForUser(slot, body.date, store.bookings)) {
       return NextResponse.json({ error: "Selected slot is not available" }, { status: 400 });
     }
-    if (hasApprovedBooking(store.bookings, body.slotId, body.date)) {
-      return NextResponse.json({ error: "This slot is already booked" }, { status: 400 });
-    }
-
     const ballsUsed = Number(body.ballsUsed) || 0;
-    const ballQuality = body.ballQuality as BallQuality | undefined;
+    const ballQualityRaw = body.ballQuality as string | undefined;
+    const ballQuality = ballQualityRaw ? normalizeBallQuality(ballQualityRaw) : undefined;
+    const amountReceivedRaw = body.amountReceived;
+    let amountReceived: number | undefined;
+    if (walkIn && amountReceivedRaw !== undefined && amountReceivedRaw !== "") {
+      amountReceived = Number(amountReceivedRaw);
+      if (Number.isNaN(amountReceived) || amountReceived < 0) {
+        return NextResponse.json({ error: "Invalid amount received" }, { status: 400 });
+      }
+    }
 
     const booking: Booking = {
       id: generateId("BK"),
@@ -63,9 +68,16 @@ export async function POST(req: NextRequest) {
       walkIn: walkIn || undefined,
       ballQuality: walkIn && ballsUsed > 0 ? ballQuality : undefined,
       ballsUsed: walkIn && ballsUsed > 0 ? ballsUsed : undefined,
+      amountReceived: walkIn ? amountReceived : undefined,
     };
 
     if (walkIn) {
+      if (amountReceived !== undefined && amountReceived > slot.price) {
+        return NextResponse.json(
+          { error: "Amount received cannot exceed session price" },
+          { status: 400 }
+        );
+      }
       if (!booking.customerName || !booking.phone || !booking.date || !booking.teamName) {
         return NextResponse.json({ error: "Name, phone, team, and date are required" }, { status: 400 });
       }

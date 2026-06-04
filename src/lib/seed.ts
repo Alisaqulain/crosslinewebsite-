@@ -57,33 +57,8 @@ export const defaultStore: AppStore = {
     },
   ],
   bookings: [],
-  ballPurchases: [
-    {
-      id: "BP1",
-      quality: "high",
-      quantity: 12,
-      purchasePrice: 4800,
-      date: "2026-05-20",
-      supplier: "Sports Gear India",
-      notes: "Season stock",
-    },
-    {
-      id: "BP2",
-      quality: "medium",
-      quantity: 24,
-      purchasePrice: 2400,
-      date: "2026-05-18",
-      supplier: "Local Supplier",
-    },
-    {
-      id: "BP3",
-      quality: "low",
-      quantity: 36,
-      purchasePrice: 1800,
-      date: "2026-05-15",
-      supplier: "Practice Balls Co",
-    },
-  ],
+  ballQualities: [],
+  ballPurchases: [],
   ballUsage: [],
   matches: [
     {
@@ -109,6 +84,7 @@ export const defaultStore: AppStore = {
     },
   ],
   dieselExpenses: [],
+  otherExpenses: [],
   financeEntries: [],
   gallery: galleryMedia,
   siteContent: {

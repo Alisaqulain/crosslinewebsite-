@@ -1,6 +1,18 @@
 export type BookingStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type MatchType = "practice" | "friendly" | "tournament" | "corporate" | "academy";
-export type BallQuality = "low" | "medium" | "high";
+/** Ball quality id — admin can add more in Ball Stock settings */
+export type BallQuality = string;
+
+export interface BallQualityOption {
+  id: string;
+  label: string;
+}
+
+export const DEFAULT_BALL_QUALITIES: BallQualityOption[] = [
+  { id: "low", label: "Low Quality" },
+  { id: "medium", label: "Medium Quality" },
+  { id: "high", label: "High Quality" },
+];
 export type StadiumMatchStatus = "upcoming" | "completed" | "cancelled";
 export type TransactionType = "income" | "expense";
 export type TransactionCategory =
@@ -55,6 +67,8 @@ export interface Booking {
   ballsUsed?: number;
   /** Walk-in / phone booking (not from website) */
   walkIn?: boolean;
+  /** Cash/advance received (₹). Udhari = slotPrice − amountReceived */
+  amountReceived?: number;
 }
 
 export interface BallPurchase {
@@ -98,6 +112,17 @@ export interface DieselExpense {
   totalCost: number;
   purpose: string;
   shift: ShiftCategory;
+}
+
+/** Ground purchases, equipment, maintenance, etc. */
+export interface OtherExpense {
+  id: string;
+  date: string;
+  title: string;
+  amount: number;
+  category: string;
+  shift: ShiftCategory;
+  note?: string;
 }
 
 export interface FinanceEntry {
@@ -173,10 +198,12 @@ export interface AppStore {
   bookings: Booking[];
   slots: TimeSlot[];
   blockedDates: string[];
+  ballQualities: BallQualityOption[];
   ballPurchases: BallPurchase[];
   ballUsage: BallUsage[];
   matches: StadiumMatch[];
   dieselExpenses: DieselExpense[];
+  otherExpenses: OtherExpense[];
   financeEntries: FinanceEntry[];
   gallery: GalleryItem[];
   siteContent: SiteContent;
@@ -187,7 +214,8 @@ export interface AppStore {
 
 export type GalleryImage = GalleryItem;
 
-export const BALL_QUALITY_LABELS: Record<BallQuality, string> = {
+/** @deprecated Use getQualityLabel(store, id) */
+export const BALL_QUALITY_LABELS: Record<string, string> = {
   low: "Low Quality",
   medium: "Medium Quality",
   high: "High Quality",

@@ -142,6 +142,7 @@ export default function AdminFinancePage() {
           { label: "Booking Income", value: summary.bookingIncome },
           { label: "Diesel Total", value: summary.dieselTotal },
           { label: "Ball Purchase", value: summary.ballPurchaseTotal },
+          { label: "Other Expenses", value: summary.otherExpenseTotal },
           { label: "Monthly Income", value: summary.monthlyIncome },
         ].map((item) => (
           <Card key={item.label} className="!p-4">

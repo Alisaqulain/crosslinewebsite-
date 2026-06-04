@@ -28,20 +28,43 @@ export function formatSessionValidity(slot: TimeSlot): string {
 export function hasApprovedBooking(
   bookings: Booking[],
   slotId: string,
-  date: string
+  date: string,
+  excludeBookingId?: string
 ): boolean {
   return bookings.some(
-    (b) => b.slotId === slotId && b.date === date && b.status === "approved"
+    (b) =>
+      b.id !== excludeBookingId &&
+      b.slotId === slotId &&
+      b.date === date &&
+      b.status === "approved"
   );
 }
 
 export function hasPendingBooking(
   bookings: Booking[],
   slotId: string,
-  date: string
+  date: string,
+  excludeBookingId?: string
 ): boolean {
   return bookings.some(
-    (b) => b.slotId === slotId && b.date === date && b.status === "pending"
+    (b) =>
+      b.id !== excludeBookingId &&
+      b.slotId === slotId &&
+      b.date === date &&
+      b.status === "pending"
+  );
+}
+
+/** One session per date — pending or approved blocks the slot */
+export function isSlotTakenForDate(
+  bookings: Booking[],
+  slotId: string,
+  date: string,
+  excludeBookingId?: string
+): boolean {
+  return (
+    hasApprovedBooking(bookings, slotId, date, excludeBookingId) ||
+    hasPendingBooking(bookings, slotId, date, excludeBookingId)
   );
 }
 
@@ -52,7 +75,7 @@ export function isSlotAvailableForUser(
 ): boolean {
   if (!slot.available) return false;
   if (!isSessionActiveOnDate(slot, date)) return false;
-  return !hasApprovedBooking(bookings, slot.id, date);
+  return !isSlotTakenForDate(bookings, slot.id, date);
 }
 
 export function getBookingSlotsForDate(store: AppStore, date: string): BookingSlotView[] {
@@ -63,8 +86,8 @@ export function getBookingSlotsForDate(store: AppStore, date: string): BookingSl
       const booked = hasApprovedBooking(store.bookings, s.id, date);
       let statusLabel: string | undefined;
       if (!s.available) statusLabel = "Closed — not open for booking";
-      else if (booked) statusLabel = "Already booked on this date";
-      else if (underReview) statusLabel = "Booking under review";
+      else if (booked) statusLabel = "Session already booked";
+      else if (underReview) statusLabel = "Under review — slot held until admin decides";
 
       return {
         ...s,
