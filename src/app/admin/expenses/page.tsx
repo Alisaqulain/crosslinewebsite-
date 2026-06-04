@@ -49,8 +49,8 @@ export default function AdminOtherExpensesPage() {
   const save = async (data: OtherExpense[]) => {
     setSaving(true);
     try {
-      await patchAdmin("otherExpenses", data);
-      setExpenses(data);
+      const { store } = await patchAdmin("otherExpenses", data);
+      setExpenses(store.otherExpenses ?? data);
       toast("Saved", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Save failed", "error");
@@ -60,13 +60,14 @@ export default function AdminOtherExpensesPage() {
   };
 
   const submitEntry = () => {
-    if (!form.title.trim() || !form.amount) {
-      toast("Title and amount are required", "error");
+    const amount = Number(form.amount);
+    if (!form.title.trim() || !amount || amount <= 0) {
+      toast("Title and a valid amount are required", "error");
       return;
     }
     if (editingId) {
       const next = expenses.map((e) =>
-        e.id === editingId ? { ...e, ...form, amount: Number(form.amount) } : e
+        e.id === editingId ? { ...e, ...form, amount } : e
       );
       save(next);
       setEditingId(null);
@@ -74,7 +75,7 @@ export default function AdminOtherExpensesPage() {
       const entry: OtherExpense = {
         id: `OE-${Date.now().toString(36).toUpperCase()}`,
         ...form,
-        amount: Number(form.amount),
+        amount,
       };
       save([entry, ...expenses]);
     }

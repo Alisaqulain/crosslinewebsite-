@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/Toast";
 import { getAvailableBalls, normalizeBallQuality } from "@/lib/ball-stock";
 import { getBallStock } from "@/lib/finance";
 import { getQualityLabel } from "@/lib/qualities";
+import { formatCurrency } from "@/lib/utils";
 import type { AppStore, BallPurchase, BallQuality, BallUsage } from "@/lib/types";
 import { Package, ArrowDown, ArrowUp, Loader2, Save, Search } from "lucide-react";
 
@@ -44,6 +45,7 @@ export default function AdminInventoryPage() {
   const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [editingUsageId, setEditingUsageId] = useState<string | null>(null);
   const [purchaseForm, setPurchaseForm] = useState(emptyPurchase);
+  const [pricePerBall, setPricePerBall] = useState(0);
   const [usageForm, setUsageForm] = useState(emptyUsage);
 
   const load = () => {
@@ -101,7 +103,12 @@ export default function AdminInventoryPage() {
       toast("Fill quality name, quantity and supplier", "error");
       return;
     }
-    const payload = { ...purchaseForm, quality };
+    const totalCost = purchaseForm.quantity * pricePerBall;
+    if (!pricePerBall) {
+      toast("Enter price per ball", "error");
+      return;
+    }
+    const payload = { ...purchaseForm, quality, purchasePrice: totalCost };
     if (editingPurchaseId) {
       const next = purchases.map((p) =>
         p.id === editingPurchaseId ? { ...p, ...payload } : p
@@ -117,6 +124,7 @@ export default function AdminInventoryPage() {
     }
     setShowPurchase(false);
     setPurchaseForm(emptyPurchase());
+    setPricePerBall(0);
   };
 
   const saveUsageEntry = () => {
@@ -159,6 +167,7 @@ export default function AdminInventoryPage() {
       supplier: p.supplier,
       notes: p.notes ?? "",
     });
+    setPricePerBall(p.quantity > 0 ? Math.round(p.purchasePrice / p.quantity) : 0);
     setShowPurchase(true);
     setShowUsage(false);
   };
@@ -313,8 +322,20 @@ export default function AdminInventoryPage() {
               <Input type="number" value={purchaseForm.quantity || ""} onChange={(e) => setPurchaseForm({ ...purchaseForm, quantity: Number(e.target.value) })} />
             </div>
             <div>
-              <Label>Purchase Price (₹)</Label>
-              <Input type="number" value={purchaseForm.purchasePrice || ""} onChange={(e) => setPurchaseForm({ ...purchaseForm, purchasePrice: Number(e.target.value) })} />
+              <Label>Price per ball (₹)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={pricePerBall || ""}
+                onChange={(e) => setPricePerBall(Number(e.target.value))}
+                placeholder="e.g. 400"
+              />
+              {purchaseForm.quantity > 0 && pricePerBall > 0 && (
+                <p className="text-xs text-green-700 font-semibold mt-1">
+                  Total cost: {formatCurrency(purchaseForm.quantity * pricePerBall)} (
+                  {purchaseForm.quantity} × ₹{pricePerBall})
+                </p>
+              )}
             </div>
             <div>
               <Label>Date</Label>
@@ -409,7 +430,10 @@ export default function AdminInventoryPage() {
                       {store ? getQualityLabel(store, p.quality) : p.quality} × {p.quantity}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {p.date} · {p.supplier} · ₹{p.purchasePrice}
+                      {p.date} · {p.supplier} · {formatCurrency(p.purchasePrice)} total
+                      {p.quantity > 0
+                        ? ` (${p.quantity} @ ₹${Math.round(p.purchasePrice / p.quantity)}/ball)`
+                        : ""}
                       {p.notes ? ` · ${p.notes}` : ""}
                     </p>
                   </div>

@@ -139,7 +139,8 @@ export default function AdminFinancePage() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Booking Income", value: summary.bookingIncome },
+          { label: "Booking cash received", value: summary.bookingCashIncome },
+          { label: "Total billed (sessions)", value: summary.bookingBilledTotal },
           { label: "Diesel Total", value: summary.dieselTotal },
           { label: "Ball Purchase", value: summary.ballPurchaseTotal },
           { label: "Other Expenses", value: summary.otherExpenseTotal },

@@ -13,6 +13,8 @@ const StoreSchema = new Schema<AppStore & { _id: string }>(
     ballUsage: { type: Schema.Types.Mixed, default: [] },
     matches: { type: Schema.Types.Mixed, default: [] },
     dieselExpenses: { type: Schema.Types.Mixed, default: [] },
+    otherExpenses: { type: Schema.Types.Mixed, default: [] },
+    ballQualities: { type: Schema.Types.Mixed, default: [] },
     financeEntries: { type: Schema.Types.Mixed, default: [] },
     gallery: { type: Schema.Types.Mixed, default: [] },
     siteContent: { type: Schema.Types.Mixed, default: {} },

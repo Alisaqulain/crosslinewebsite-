@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { DashboardFinanceSummary } from "@/components/admin/DashboardFinanceSummary";
 import { FinanceAllTimeStrip, FinancePeriodPanel } from "@/components/admin/FinancePeriodPanel";
 import { StatCard } from "@/components/admin/StatCard";
 import { Card } from "@/components/ui/Card";
@@ -69,6 +70,8 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminShell title="Dashboard">
+      <DashboardFinanceSummary finance={finance} />
+
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <p className="text-sm text-[var(--text-muted)] flex items-center gap-2">
           <BarChart3 className="h-4 w-4" />
@@ -95,26 +98,6 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
-        <Card className="!p-4 border-l-4 border-l-green-500">
-          <p className="text-xs text-slate-500">Cash received (bookings)</p>
-          <p className="text-xl font-bold text-green-600 mt-1">{formatCurrency(udhari.totalReceived)}</p>
-        </Card>
-        <Card className="!p-4">
-          <p className="text-xs text-slate-500">Billed (approved sessions)</p>
-          <p className="text-xl font-bold text-[var(--navy)] mt-1">{formatCurrency(udhari.totalBilled)}</p>
-        </Card>
-        <Card className="!p-4 border-l-4 border-l-red-500">
-          <p className="text-xs text-slate-500 flex items-center justify-between">
-            Outstanding udhari
-            <Link href="/admin/udhari" className="text-[var(--brand-red)] text-xs font-semibold hover:underline">
-              View all
-            </Link>
-          </p>
-          <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(udhari.totalUdhari)}</p>
-        </Card>
-      </div>
-
       <div className="space-y-6 mb-8">
         <FinancePeriodPanel period={finance.lastMonth} highlight />
         <FinancePeriodPanel period={finance.thisMonth} />
@@ -128,6 +111,7 @@ export default function AdminDashboardPage() {
         online={finance.allTimeOnlineIncome}
         diesel={finance.dieselTotal}
         balls={finance.ballPurchaseTotal}
+        other={finance.otherExpenseTotal}
       />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

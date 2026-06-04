@@ -88,13 +88,13 @@ export function FinancePeriodPanel({
             Income
           </p>
           <Row
-            label="Online bookings (website)"
+            label="Cash received — online"
             value={period.income.onlineBooking}
             positive
             icon={<Globe className="h-3.5 w-3.5" />}
           />
           <Row
-            label="Walk-in / direct matches"
+            label="Cash received — walk-in"
             value={period.income.walkInBooking}
             positive
             icon={<UserRound className="h-3.5 w-3.5" />}
@@ -119,6 +119,7 @@ export function FinancePeriodPanel({
             positive={false}
             icon={<Package className="h-3.5 w-3.5" />}
           />
+          <Row label="Other ground expenses" value={period.expense.other} positive={false} />
           <Row label="Other manual expense" value={period.expense.manual} positive={false} />
           <Row label="Total expense" value={period.expense.total} positive={false} />
         </div>
@@ -135,6 +136,7 @@ export function FinanceAllTimeStrip({
   online,
   diesel,
   balls,
+  other = 0,
 }: {
   income: number;
   expense: number;
@@ -143,6 +145,7 @@ export function FinanceAllTimeStrip({
   online: number;
   diesel: number;
   balls: number;
+  other?: number;
 }) {
   return (
     <Card className="!p-5 mb-8">
@@ -152,13 +155,14 @@ export function FinanceAllTimeStrip({
       </h3>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Total income", value: income, color: "text-green-600" },
+          { label: "Cash income (received)", value: income, color: "text-green-600" },
           { label: "Total expense", value: expense, color: "text-red-600" },
           { label: "Net profit", value: net, color: net >= 0 ? "text-green-600" : "text-red-600" },
           { label: "Online match income", value: online, color: "text-[var(--navy)]" },
           { label: "Walk-in match income", value: walkIn, color: "text-[var(--navy)]" },
           { label: "Diesel expense", value: diesel, color: "text-red-600" },
           { label: "Ball expense", value: balls, color: "text-red-600" },
+          { label: "Other expenses", value: other, color: "text-red-600" },
         ].map((item) => (
           <div key={item.label} className="p-3 rounded-xl admin-subtle">
             <p className="text-xs text-[var(--text-muted)]">{item.label}</p>
