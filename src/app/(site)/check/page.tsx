@@ -183,8 +183,13 @@ export default function CheckPage() {
               })}
             </div>
 
-            <p className="mt-8 text-center text-xs text-[var(--text-muted)]">
-              Remove or protect this route in production if you don&apos;t want it public.
+            <p className="mt-8 text-center text-sm text-[var(--text-muted)]">
+              <a href="/updates" className="text-[var(--brand-red)] font-semibold hover:underline">
+                View latest updates →
+              </a>
+            </p>
+            <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
+              Remove or protect /check and /updates in production if you don&apos;t want them public.
             </p>
           </>
         )}

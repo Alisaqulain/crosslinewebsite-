@@ -40,6 +40,7 @@ export const footerLinks = [
   { href: "/gallery", label: "Gallery" },
   { href: "/contact", label: "Contact Us" },
   { href: "/admin/login", label: "Admin Login" },
+  { href: "/updates", label: "Latest Updates" },
 ] as const;
 
 export const facilityItems = [
