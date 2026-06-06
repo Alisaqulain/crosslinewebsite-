@@ -151,6 +151,11 @@ export async function PATCH(
     } else if (booking.status === "approved") {
       if (recordingPayment) {
         booking.amountReceived = Number(body.amountReceived) || 0;
+        if (body.receivedByOwnerId !== undefined) {
+          const oid = String(body.receivedByOwnerId).trim();
+          if (oid) booking.receivedByOwnerId = oid;
+          else delete booking.receivedByOwnerId;
+        }
       }
       if (approving) {
         bookings = bookings.map((b) => {

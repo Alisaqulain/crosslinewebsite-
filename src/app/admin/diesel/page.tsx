@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +11,8 @@ import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { DieselExpense, ShiftCategory } from "@/lib/types";
+import { getOwnerName } from "@/lib/owners";
+import type { AppStore, DieselExpense, ShiftCategory, StadiumOwner } from "@/lib/types";
 import { Fuel, Loader2, Plus, Save } from "lucide-react";
 
 const emptyForm = () => ({
@@ -19,10 +21,13 @@ const emptyForm = () => ({
   pricePerLiter: 0,
   purpose: "",
   shift: "day" as ShiftCategory,
+  ownerId: "",
 });
 
 export default function AdminDieselPage() {
   const { toast } = useToast();
+  const [store, setStore] = useState<AppStore | null>(null);
+  const [owners, setOwners] = useState<StadiumOwner[]>([]);
   const [expenses, setExpenses] = useState<DieselExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,8 +35,10 @@ export default function AdminDieselPage() {
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
-    fetchAdminStore().then(({ store }) => {
-      setExpenses(store.dieselExpenses);
+    fetchAdminStore().then(({ store: s }) => {
+      setStore(s);
+      setOwners(s.owners ?? []);
+      setExpenses(s.dieselExpenses);
       setLoading(false);
     });
   }, []);
@@ -50,7 +57,10 @@ export default function AdminDieselPage() {
   };
 
   const submitEntry = () => {
-    if (!form.liters) return;
+    if (!form.liters || !form.ownerId) {
+      toast("Fill liters and select owner", "error");
+      return;
+    }
     const totalCost = form.liters * form.pricePerLiter;
     if (editingId) {
       const next = expenses.map((e) =>
@@ -77,6 +87,7 @@ export default function AdminDieselPage() {
       pricePerLiter: e.pricePerLiter,
       purpose: e.purpose,
       shift: e.shift,
+      ownerId: e.ownerId ?? "",
     });
   };
 
@@ -124,6 +135,13 @@ export default function AdminDieselPage() {
               <option value="night">Night</option>
             </Select>
           </div>
+          <OwnerSelect
+            owners={owners}
+            value={form.ownerId}
+            onChange={(ownerId) => setForm({ ...form, ownerId })}
+            label="Paid by / recorded by"
+            required
+          />
           <div className="sm:col-span-2">
             <Label>Purpose / Note</Label>
             <Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} className="mt-1" />
@@ -160,7 +178,14 @@ export default function AdminDieselPage() {
             { key: "rate", header: "Rate", render: (e) => formatCurrency(e.pricePerLiter) },
             { key: "total", header: "Total", render: (e) => formatCurrency(e.totalCost) },
             { key: "shift", header: "Shift", render: (e) => <span className="capitalize">{e.shift}</span> },
-            { key: "purpose", header: "Purpose", render: (e) => e.purpose },
+            { key: "purpose", header: "Purpose", render: (e) => (
+              <span>
+                {e.purpose}
+                {store && e.ownerId && (
+                  <span className="block text-xs text-red-700">By {getOwnerName(store, e.ownerId)}</span>
+                )}
+              </span>
+            ) },
             {
               key: "actions",
               header: "",

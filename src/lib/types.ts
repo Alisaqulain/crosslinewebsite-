@@ -46,6 +46,11 @@ export type BookingSlotView = TimeSlot & {
   underReview?: boolean;
 };
 
+export interface StadiumOwner {
+  id: string;
+  name: string;
+}
+
 export interface Booking {
   id: string;
   customerName: string;
@@ -69,6 +74,8 @@ export interface Booking {
   walkIn?: boolean;
   /** Cash/advance received (₹). Udhari = slotPrice − amountReceived */
   amountReceived?: number;
+  /** Partner / owner who received this payment */
+  receivedByOwnerId?: string;
 }
 
 export interface BallPurchase {
@@ -112,6 +119,8 @@ export interface DieselExpense {
   totalCost: number;
   purpose: string;
   shift: ShiftCategory;
+  /** Who paid / recorded this expense */
+  ownerId?: string;
 }
 
 /** Ground purchases, equipment, maintenance, etc. */
@@ -123,6 +132,19 @@ export interface OtherExpense {
   category: string;
   shift: ShiftCategory;
   note?: string;
+  ownerId?: string;
+}
+
+/** Extra income — sponsorship, rent, misc (not booking) */
+export interface OtherIncome {
+  id: string;
+  date: string;
+  title: string;
+  amount: number;
+  category: string;
+  shift: ShiftCategory;
+  note?: string;
+  ownerId?: string;
 }
 
 export interface FinanceEntry {
@@ -195,6 +217,7 @@ export interface ContactMessage {
 }
 
 export interface AppStore {
+  owners: StadiumOwner[];
   bookings: Booking[];
   slots: TimeSlot[];
   blockedDates: string[];
@@ -204,6 +227,7 @@ export interface AppStore {
   matches: StadiumMatch[];
   dieselExpenses: DieselExpense[];
   otherExpenses: OtherExpense[];
+  otherIncomes: OtherIncome[];
   financeEntries: FinanceEntry[];
   gallery: GalleryItem[];
   siteContent: SiteContent;

@@ -41,6 +41,12 @@ export async function PATCH(req: NextRequest) {
         case "dieselExpenses":
           next.dieselExpenses = data;
           break;
+        case "owners":
+          next.owners = data;
+          break;
+        case "otherIncomes":
+          next.otherIncomes = data;
+          break;
         case "otherExpenses":
           next.otherExpenses = data;
           break;

@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/Card";
 import { formatCurrency } from "@/lib/utils";
 import type { getFinanceSummary } from "@/lib/finance";
-import { Sun, Moon, TrendingDown, TrendingUp, IndianRupee, Fuel, Package, Receipt } from "lucide-react";
+import { Sun, Moon, TrendingDown, TrendingUp, IndianRupee, Fuel, Package, Receipt, Users } from "lucide-react";
 
 export function DashboardFinanceSummary({
   finance,
@@ -26,7 +26,10 @@ export function DashboardFinanceSummary({
             Cash income (received)
           </p>
           <p className="text-2xl font-bold text-green-700 mt-1">{formatCurrency(finance.totalIncome)}</p>
-          <p className="text-[10px] text-green-700/80 mt-1">Bookings ₹{finance.bookingCashIncome.toLocaleString("en-IN")} + other</p>
+          <p className="text-[10px] text-green-700/80 mt-1">
+            Bookings {formatCurrency(finance.bookingCashIncome)} + other{" "}
+            {formatCurrency(finance.otherIncomeTotal)}
+          </p>
         </div>
         <div className="p-4 rounded-xl bg-red-50 border border-red-200">
           <p className="text-xs text-red-800 font-semibold uppercase tracking-wide flex items-center gap-1">
@@ -98,7 +101,7 @@ export function DashboardFinanceSummary({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="p-3 rounded-xl border border-orange-200 bg-orange-50/50 flex items-center gap-2">
           <Package className="h-4 w-4 text-orange-600" />
           <div>
@@ -120,7 +123,51 @@ export function DashboardFinanceSummary({
             <p className="font-bold text-red-700">{formatCurrency(finance.otherExpenseTotal)}</p>
           </div>
         </div>
+        <div className="p-3 rounded-xl border border-green-200 bg-green-50/50 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-green-600" />
+          <div>
+            <p className="text-xs text-slate-600">Other income</p>
+            <p className="font-bold text-green-700">{formatCurrency(finance.otherIncomeTotal)}</p>
+          </div>
+        </div>
       </div>
+
+      {finance.ownerStats.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-[var(--border)]">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--navy)] mb-4 flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Per owner — income & expenses
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {finance.ownerStats.map((o) => (
+              <div key={o.ownerId} className="p-4 rounded-xl admin-subtle border border-[var(--border)]">
+                <p className="font-bold text-[var(--navy)] text-lg">{o.name}</p>
+                <div className="mt-3 space-y-1.5 text-sm">
+                  <p>
+                    <span className="text-green-700 font-semibold">{formatCurrency(o.incomeTotal)}</span>
+                    <span className="text-slate-500"> income</span>
+                    <span className="text-xs text-slate-400"> ({o.incomeCount} entries)</span>
+                  </p>
+                  <p className="text-xs text-slate-500 pl-2">
+                    Bookings {formatCurrency(o.bookingIncome)} · Other {formatCurrency(o.otherIncome)}
+                  </p>
+                  <p>
+                    <span className="text-red-600 font-semibold">{formatCurrency(o.expenseTotal)}</span>
+                    <span className="text-slate-500"> expenses</span>
+                    <span className="text-xs text-slate-400"> ({o.expenseCount} entries)</span>
+                  </p>
+                  <p className="text-xs text-slate-500 pl-2">
+                    Diesel {formatCurrency(o.dieselExpense)} · Other {formatCurrency(o.otherExpense)}
+                  </p>
+                  <p className={`pt-2 font-bold ${o.net >= 0 ? "text-green-700" : "text-red-600"}`}>
+                    Net: {formatCurrency(o.net)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

@@ -13,6 +13,8 @@ import {
   Fuel,
   Receipt,
   IndianRupee,
+  Users,
+  TrendingUp,
   LogOut,
   Medal,
 } from "lucide-react";
@@ -21,11 +23,13 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/owners", label: "Owners", icon: Users },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
   { href: "/admin/udhari", label: "Udhari (Credit)", icon: IndianRupee },
   { href: "/admin/slots", label: "Slot Pricing", icon: Clock },
   { href: "/admin/diesel", label: "Diesel", icon: Fuel },
   { href: "/admin/expenses", label: "Other Expenses", icon: Receipt },
+  { href: "/admin/other-income", label: "Other Income", icon: TrendingUp },
   { href: "/admin/inventory", label: "Ball Stock", icon: Package },
   { href: "/admin/finance", label: "Profit & Loss", icon: BarChart3 },
   { href: "/admin/gallery", label: "Gallery", icon: Image },

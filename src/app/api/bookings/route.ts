@@ -69,6 +69,10 @@ export async function POST(req: NextRequest) {
       ballQuality: walkIn && ballsUsed > 0 ? ballQuality : undefined,
       ballsUsed: walkIn && ballsUsed > 0 ? ballsUsed : undefined,
       amountReceived: walkIn ? amountReceived : undefined,
+      receivedByOwnerId:
+        walkIn && body.receivedByOwnerId
+          ? String(body.receivedByOwnerId).trim() || undefined
+          : undefined,
     };
 
     if (walkIn) {

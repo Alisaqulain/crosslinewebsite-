@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select } from "@/components/ui/Input";
+import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { BallQualitySelect } from "@/components/admin/BallQualitySelect";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import {
@@ -63,6 +64,7 @@ export default function AdminBookingsPage() {
   const [ballTarget, setBallTarget] = useState<Booking | null>(null);
   const [payTarget, setPayTarget] = useState<Booking | null>(null);
   const [amountReceivedInput, setAmountReceivedInput] = useState("");
+  const [paymentOwnerId, setPaymentOwnerId] = useState("");
   const [ballQuality, setBallQuality] = useState<BallQuality>("");
   const [ballsUsed, setBallsUsed] = useState(0);
   const [assignBalls, setAssignBalls] = useState(false);
@@ -80,6 +82,7 @@ export default function AdminBookingsPage() {
     ballQuality: "" as BallQuality,
     ballsUsed: 0,
     amountReceived: "" as string | number,
+    receivedByOwnerId: "",
   });
 
   const load = useCallback(async () => {
@@ -145,6 +148,7 @@ export default function AdminBookingsPage() {
   const openPayment = (b: Booking) => {
     setPayTarget(b);
     setAmountReceivedInput(String(bookingAmountReceived(b) || ""));
+    setPaymentOwnerId(b.receivedByOwnerId ?? "");
   };
 
   const confirmPayment = async () => {
@@ -158,9 +162,17 @@ export default function AdminBookingsPage() {
       toast(`Cannot exceed ${formatCurrency(payTarget.slotPrice)}`, "error");
       return;
     }
+    if (received > 0 && !paymentOwnerId) {
+      toast("Select who received the money", "error");
+      return;
+    }
     setActionId(payTarget.id);
     try {
-      await patchBooking(payTarget.id, { recordPayment: true, amountReceived: received });
+      await patchBooking(payTarget.id, {
+        recordPayment: true,
+        amountReceived: received,
+        receivedByOwnerId: paymentOwnerId || null,
+      });
       const left = payTarget.slotPrice - received;
       toast(
         left > 0 ? `Saved — ${formatCurrency(left)} udhari` : "Full payment recorded",
@@ -269,6 +281,7 @@ export default function AdminBookingsPage() {
           walkIn.amountReceived !== "" && walkIn.amountReceived !== undefined
             ? Number(walkIn.amountReceived)
             : undefined,
+        receivedByOwnerId: walkIn.receivedByOwnerId || undefined,
       });
       toast("Direct booking saved — stock updated", "success");
       setShowWalkIn(false);
@@ -283,6 +296,7 @@ export default function AdminBookingsPage() {
         ballQuality: "",
         ballsUsed: 0,
         amountReceived: "",
+        receivedByOwnerId: "",
       });
       setWalkInAssignBalls(false);
       load();
@@ -396,6 +410,14 @@ export default function AdminBookingsPage() {
                 </p>
               )}
             </div>
+            {store && (
+              <OwnerSelect
+                owners={store.owners ?? []}
+                value={walkIn.receivedByOwnerId}
+                onChange={(receivedByOwnerId) => setWalkIn({ ...walkIn, receivedByOwnerId })}
+                label="Money received by"
+              />
+            )}
             <div className="sm:col-span-2 space-y-2 p-3 rounded-xl admin-subtle border border-[var(--border)]">
               <p className="text-xs font-semibold text-[var(--navy)]">Stadium balls</p>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -551,6 +573,15 @@ export default function AdminBookingsPage() {
                 </strong>
               </p>
             </div>
+            {store && (
+              <OwnerSelect
+                owners={store.owners ?? []}
+                value={paymentOwnerId}
+                onChange={setPaymentOwnerId}
+                label="Money received by"
+                required={Number(amountReceivedInput) > 0}
+              />
+            )}
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => setPayTarget(null)}>
                 Cancel

@@ -3,6 +3,7 @@ import { galleryMedia } from "./media";
 import { stadiumInfo } from "./data";
 
 export const defaultStore: AppStore = {
+  owners: [],
   blockedDates: [],
   slots: [
     {
@@ -85,6 +86,7 @@ export const defaultStore: AppStore = {
   ],
   dieselExpenses: [],
   otherExpenses: [],
+  otherIncomes: [],
   financeEntries: [],
   gallery: galleryMedia,
   siteContent: {

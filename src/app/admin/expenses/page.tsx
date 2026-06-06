@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +11,8 @@ import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { OtherExpense, ShiftCategory } from "@/lib/types";
+import { getOwnerName } from "@/lib/owners";
+import type { AppStore, OtherExpense, ShiftCategory, StadiumOwner } from "@/lib/types";
 import { Loader2, Plus, Receipt, Save } from "lucide-react";
 
 const CATEGORIES = [
@@ -29,10 +31,13 @@ const emptyForm = () => ({
   category: CATEGORIES[0],
   shift: "day" as ShiftCategory,
   note: "",
+  ownerId: "",
 });
 
 export default function AdminOtherExpensesPage() {
   const { toast } = useToast();
+  const [store, setStore] = useState<AppStore | null>(null);
+  const [owners, setOwners] = useState<StadiumOwner[]>([]);
   const [expenses, setExpenses] = useState<OtherExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,8 +45,10 @@ export default function AdminOtherExpensesPage() {
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
-    fetchAdminStore().then(({ store }) => {
-      setExpenses(store.otherExpenses ?? []);
+    fetchAdminStore().then(({ store: s }) => {
+      setStore(s);
+      setOwners(s.owners ?? []);
+      setExpenses(s.otherExpenses ?? []);
       setLoading(false);
     });
   }, []);
@@ -49,8 +56,9 @@ export default function AdminOtherExpensesPage() {
   const save = async (data: OtherExpense[]) => {
     setSaving(true);
     try {
-      const { store } = await patchAdmin("otherExpenses", data);
-      setExpenses(store.otherExpenses ?? data);
+      const { store: updated } = await patchAdmin("otherExpenses", data);
+      setStore(updated);
+      setExpenses(updated.otherExpenses ?? data);
       toast("Saved", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Save failed", "error");
@@ -63,6 +71,10 @@ export default function AdminOtherExpensesPage() {
     const amount = Number(form.amount);
     if (!form.title.trim() || !amount || amount <= 0) {
       toast("Title and a valid amount are required", "error");
+      return;
+    }
+    if (!form.ownerId) {
+      toast("Select who paid / recorded this expense", "error");
       return;
     }
     if (editingId) {
@@ -91,6 +103,7 @@ export default function AdminOtherExpensesPage() {
       category: e.category,
       shift: e.shift,
       note: e.note ?? "",
+      ownerId: e.ownerId ?? "",
     });
   };
 
@@ -151,6 +164,13 @@ export default function AdminOtherExpensesPage() {
               className="mt-1"
             />
           </div>
+          <OwnerSelect
+            owners={owners}
+            value={form.ownerId}
+            onChange={(ownerId) => setForm({ ...form, ownerId })}
+            label="Paid by / recorded by"
+            required
+          />
           <div>
             <Label>Category</Label>
             <Select
@@ -227,6 +247,9 @@ export default function AdminOtherExpensesPage() {
               render: (e) => (
                 <div>
                   <p className="font-medium text-[var(--navy)]">{e.title}</p>
+                  {store && e.ownerId && (
+                    <p className="text-xs text-red-700">By {getOwnerName(store, e.ownerId)}</p>
+                  )}
                   {e.note && <p className="text-xs text-slate-500">{e.note}</p>}
                 </div>
               ),

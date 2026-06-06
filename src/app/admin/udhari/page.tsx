@@ -5,27 +5,33 @@ import { AdminShell } from "@/components/admin/AdminHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
+import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchBooking } from "@/lib/api-client";
+import { getOwnerName } from "@/lib/owners";
 import { bookingAmountReceived, bookingUdhari, getUdhariSummary } from "@/lib/udhari";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Booking } from "@/lib/types";
+import type { AppStore, Booking, StadiumOwner } from "@/lib/types";
 import { IndianRupee, Loader2, Save } from "lucide-react";
 
 export default function AdminUdhariPage() {
   const { toast } = useToast();
+  const [store, setStore] = useState<AppStore | null>(null);
+  const [owners, setOwners] = useState<StadiumOwner[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [payTarget, setPayTarget] = useState<Booking | null>(null);
-  const [amountInput, setAmountInput] = useState("");
+  const [paymentOwnerId, setPaymentOwnerId] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { store } = await fetchAdminStore();
-      setBookings(store.bookings);
+      const { store: s } = await fetchAdminStore();
+      setStore(s);
+      setOwners(s.owners ?? []);
+      setBookings(s.bookings);
     } catch {
       toast("Failed to load", "error");
     } finally {
@@ -39,9 +45,12 @@ export default function AdminUdhariPage() {
 
   const summary = getUdhariSummary(bookings);
 
+  const [amountInput, setAmountInput] = useState("");
+
   const openPayment = (b: Booking) => {
     setPayTarget(b);
     setAmountInput(String(bookingAmountReceived(b) || ""));
+    setPaymentOwnerId(b.receivedByOwnerId ?? "");
   };
 
   const savePayment = async () => {
@@ -55,9 +64,17 @@ export default function AdminUdhariPage() {
       toast(`Cannot exceed ${formatCurrency(payTarget.slotPrice)}`, "error");
       return;
     }
+    if (received > 0 && !paymentOwnerId) {
+      toast("Select who received the money", "error");
+      return;
+    }
     setActionId(payTarget.id);
     try {
-      await patchBooking(payTarget.id, { recordPayment: true, amountReceived: received });
+      await patchBooking(payTarget.id, {
+        recordPayment: true,
+        amountReceived: received,
+        receivedByOwnerId: paymentOwnerId || null,
+      });
       const udhari = payTarget.slotPrice - received;
       toast(
         udhari > 0
@@ -237,6 +254,14 @@ export default function AdminUdhariPage() {
               render: (b) => formatCurrency(bookingAmountReceived(b)),
             },
             {
+              key: "owner",
+              header: "Received by",
+              render: (b) =>
+                b.receivedByOwnerId
+                  ? getOwnerName(owners, b.receivedByOwnerId)
+                  : "—",
+            },
+            {
               key: "udhari",
               header: "Udhari",
               render: (b) => {
@@ -294,6 +319,13 @@ export default function AdminUdhariPage() {
                 className="mt-1"
               />
             </div>
+            <OwnerSelect
+              owners={owners}
+              value={paymentOwnerId}
+              onChange={setPaymentOwnerId}
+              label="Received by (owner)"
+              required={Number(amountInput) > 0}
+            />
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => setPayTarget(null)}>
                 Cancel
