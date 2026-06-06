@@ -257,8 +257,8 @@ export default function AdminUdhariPage() {
               key: "owner",
               header: "Received by",
               render: (b) =>
-                b.receivedByOwnerId
-                  ? getOwnerName(owners, b.receivedByOwnerId)
+                b.receivedByOwnerId && store
+                  ? getOwnerName(store, b.receivedByOwnerId)
                   : "—",
             },
             {
