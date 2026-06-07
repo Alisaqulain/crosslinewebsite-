@@ -23,7 +23,7 @@ export default function HomePage() {
       <FacilitiesPreview />
       <BookingCTA slots={data.slots} />
       <AcademyPreview academy={data.academy} />
-      <TournamentPreview tournaments={data.tournaments} matches={data.matches} />
+      <TournamentPreview tournaments={data.tournaments} />
       <GalleryPreview items={data.gallery} />
       <ContactCTA />
     </>

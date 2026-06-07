@@ -1,7 +1,8 @@
 import type { AppStore, BallQuality, Booking, FinanceEntry, ShiftCategory } from "./types";
 import { getQualityLabel, resolveBallQualities } from "./qualities";
 import { getOwnerFinanceStats } from "./owners";
-import { bookingAmountReceived, getUdhariSummary } from "./udhari";
+import { completedMatches, matchAmountReceived } from "./matches";
+import { bookingAmountReceived, getStoreUdhariSummary } from "./udhari";
 
 function bookingShift(store: AppStore, slotId: string): ShiftCategory {
   const slot = store.slots.find((s) => s.id === slotId);
@@ -47,6 +48,7 @@ export interface PeriodFinance {
     total: number;
     onlineBooking: number;
     walkInBooking: number;
+    oldSessions: number;
     otherIncome: number;
     manual: number;
   };
@@ -114,11 +116,14 @@ function computePeriodFinance(store: AppStore, monthKey: string, label: string):
   const otherIncome = (store.otherIncomes ?? [])
     .filter((i) => inMonth(i.date, monthKey))
     .reduce((s, i) => s + i.amount, 0);
+  const oldSessions = completedMatches(store)
+    .filter((m) => inMonth(m.date, monthKey))
+    .reduce((s, m) => s + matchAmountReceived(m), 0);
   const manualExpense = store.financeEntries
     .filter((e) => e.type === "expense" && inMonth(e.date, monthKey))
     .reduce((s, e) => s + e.amount, 0);
 
-  const incomeTotal = onlineBooking + walkInBooking + otherIncome + manualIncome;
+  const incomeTotal = onlineBooking + walkInBooking + oldSessions + otherIncome + manualIncome;
   const expenseTotal = diesel + ballPurchase + other + manualExpense;
 
   return {
@@ -128,6 +133,7 @@ function computePeriodFinance(store: AppStore, monthKey: string, label: string):
       total: incomeTotal,
       onlineBooking,
       walkInBooking,
+      oldSessions,
       otherIncome,
       manual: manualIncome,
     },
@@ -158,6 +164,10 @@ export function getFinanceSummary(store: AppStore) {
   const ballPurchaseTotal = store.ballPurchases.reduce((s, p) => s + p.purchasePrice, 0);
   const otherExpenseTotal = (store.otherExpenses ?? []).reduce((s, o) => s + o.amount, 0);
   const otherIncomeTotal = (store.otherIncomes ?? []).reduce((s, i) => s + i.amount, 0);
+  const oldSessionIncomeTotal = completedMatches(store).reduce(
+    (s, m) => s + matchAmountReceived(m),
+    0
+  );
 
   const manualIncome = store.financeEntries
     .filter((e) => e.type === "income")
@@ -166,7 +176,7 @@ export function getFinanceSummary(store: AppStore) {
     .filter((e) => e.type === "expense")
     .reduce((s, e) => s + e.amount, 0);
 
-  const totalIncome = bookingCashIncome + otherIncomeTotal + manualIncome;
+  const totalIncome = bookingCashIncome + oldSessionIncomeTotal + otherIncomeTotal + manualIncome;
   const totalExpense = dieselTotal + ballPurchaseTotal + otherExpenseTotal + manualExpense;
 
   const sumBy = (entries: FinanceEntry[], pred: (e: FinanceEntry) => boolean) =>
@@ -186,14 +196,23 @@ export function getFinanceSummary(store: AppStore) {
     .filter((i) => i.shift === "night")
     .reduce((s, i) => s + i.amount, 0);
 
+  const oldSessionDayIncome = completedMatches(store)
+    .filter((m) => bookingShift(store, m.slotId) === "day")
+    .reduce((s, m) => s + matchAmountReceived(m), 0);
+  const oldSessionNightIncome = completedMatches(store)
+    .filter((m) => bookingShift(store, m.slotId) === "night")
+    .reduce((s, m) => s + matchAmountReceived(m), 0);
+
   const dayIncome =
     sumBy(store.financeEntries, (e) => e.type === "income" && e.shift === "day") +
     bookingDayIncome +
-    dayOtherIncome;
+    dayOtherIncome +
+    oldSessionDayIncome;
   const nightIncome =
     sumBy(store.financeEntries, (e) => e.type === "income" && e.shift === "night") +
     bookingNightIncome +
-    nightOtherIncome;
+    nightOtherIncome +
+    oldSessionNightIncome;
 
   const dayDiesel = store.dieselExpenses
     .filter((d) => d.shift === "day")
@@ -241,7 +260,7 @@ export function getFinanceSummary(store: AppStore) {
   const monthlyIncome = thisMonth.income.total;
   const monthlyExpense = thisMonth.expense.total;
 
-  const udhari = getUdhariSummary(store.bookings);
+  const udhari = getStoreUdhariSummary(store);
 
   const recentTransactions = [
     ...store.financeEntries.map((e) => ({
@@ -280,6 +299,15 @@ export function getFinanceSummary(store: AppStore) {
       note: o.title,
       shift: o.shift,
     })),
+    ...completedMatches(store).map((m) => ({
+      id: m.id,
+      date: m.date,
+      type: "income" as const,
+      category: "booking" as const,
+      amount: matchAmountReceived(m),
+      note: `${m.customerName} — ${m.slotLabel} (old session)`,
+      shift: bookingShift(store, m.slotId),
+    })),
     ...store.bookings
       .filter((b) => b.status === "approved")
       .map((b) => ({
@@ -288,7 +316,7 @@ export function getFinanceSummary(store: AppStore) {
         type: "income" as const,
         category: "booking" as const,
         amount: bookingAmountReceived(b),
-        note: `${b.teamName} — ${b.slotLabel} (received)`,
+        note: `${b.customerName} — ${b.slotLabel} (received)`,
         shift: bookingShift(store, b.slotId),
       })),
   ]
@@ -313,6 +341,7 @@ export function getFinanceSummary(store: AppStore) {
     ballPurchaseTotal,
     otherExpenseTotal,
     otherIncomeTotal,
+    oldSessionIncomeTotal,
     ownerStats: getOwnerFinanceStats(store),
     bookingCashIncome,
     bookingBilledTotal,

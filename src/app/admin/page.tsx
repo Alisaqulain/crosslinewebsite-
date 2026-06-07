@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
-import { DashboardFinanceSummary } from "@/components/admin/DashboardFinanceSummary";
-import { FinanceAllTimeStrip, FinancePeriodPanel } from "@/components/admin/FinancePeriodPanel";
 import { StatCard } from "@/components/admin/StatCard";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { fetchAdminStore } from "@/lib/api-client";
 import { getFinanceSummary } from "@/lib/finance";
-import { bookingUdhari, getUdhariSummary } from "@/lib/udhari";
+import { bookingUdhari, getStoreUdhariSummary } from "@/lib/udhari";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore } from "@/lib/types";
 import {
@@ -20,9 +18,6 @@ import {
   IndianRupee,
   Loader2,
   ArrowRight,
-  Sun,
-  Moon,
-  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -35,7 +30,7 @@ export default function AdminDashboardPage() {
     fetchAdminStore()
       .then(({ store: s, finance: f }) => {
         setStore(s);
-        setFinance(f);
+        setFinance(f ?? getFinanceSummary(s));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -58,34 +53,20 @@ export default function AdminDashboardPage() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
-  const udhari = getUdhariSummary(store.bookings);
+  const udhari = getStoreUdhariSummary(store);
 
   const quickLinks = [
     { href: "/admin/bookings", label: "Approve pending bookings" },
     { href: "/admin/udhari", label: "Udhari — who owes how much" },
+    { href: "/admin/detailed-finance", label: "Detailed finance breakdown" },
+    { href: "/admin/finance", label: "Profit & loss + PDF/Excel" },
     { href: "/admin/inventory", label: "Ball stock & purchases" },
     { href: "/admin/diesel", label: "Diesel expenses" },
-    { href: "/admin/finance", label: "Full profit & loss" },
   ];
 
   return (
     <AdminShell title="Dashboard">
-      <DashboardFinanceSummary finance={finance} />
-
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <p className="text-sm text-[var(--text-muted)] flex items-center gap-2">
-          <BarChart3 className="h-4 w-4" />
-          Income & expense analysis by month
-        </p>
-        <Link href="/admin/finance">
-          <Button variant="outline" size="sm">
-            Detailed finance
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
         <StatCard label="Pending Bookings" value={pending} icon={Calendar} color="#e31837" trend={pending > 0 ? "Needs review" : undefined} />
         <StatCard label="Approved Bookings" value={approved} icon={Users} color="#1f8a3c" />
         <StatCard label="Today's Matches" value={todayBookings} icon={Calendar} color="#1e3d73" />
@@ -98,47 +79,27 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      <div className="space-y-6 mb-8">
-        <FinancePeriodPanel period={finance.lastMonth} highlight />
-        <FinancePeriodPanel period={finance.thisMonth} />
-      </div>
-
-      <FinanceAllTimeStrip
-        income={finance.totalIncome}
-        expense={finance.totalExpense}
-        net={finance.netProfit}
-        walkIn={finance.allTimeWalkInIncome}
-        online={finance.allTimeOnlineIncome}
-        diesel={finance.dieselTotal}
-        balls={finance.ballPurchaseTotal}
-        other={finance.otherExpenseTotal}
-      />
-
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card className="!p-4">
-          <p className="text-xs text-slate-500">This month income</p>
-          <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(finance.thisMonth.income.total)}</p>
+        <Card className="!p-4 border-l-4 border-l-green-500">
+          <p className="text-xs text-slate-500">Cash income (all time)</p>
+          <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(finance.totalIncome)}</p>
         </Card>
-        <Card className="!p-4">
-          <p className="text-xs text-slate-500">This month expense</p>
-          <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(finance.thisMonth.expense.total)}</p>
+        <Card className="!p-4 border-l-4 border-l-red-500">
+          <p className="text-xs text-slate-500">Total expenses</p>
+          <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(finance.totalExpense)}</p>
         </Card>
-        <Card className="!p-4 border-l-4 border-l-amber-400">
-          <div className="flex items-center gap-2 mb-1">
-            <Sun className="h-4 w-4 text-amber-500" />
-            <p className="text-xs text-slate-500">Day shift P/L (all time)</p>
-          </div>
-          <p className={`text-lg font-bold ${finance.dayNetProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-            {formatCurrency(finance.dayNetProfit)}
+        <Card className="!p-4 border-l-4 border-l-emerald-500">
+          <p className="text-xs text-slate-500">Net profit</p>
+          <p className={`text-lg font-bold mt-1 ${finance.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+            {formatCurrency(finance.netProfit)}
           </p>
         </Card>
-        <Card className="!p-4 border-l-4 border-l-indigo-500">
-          <div className="flex items-center gap-2 mb-1">
-            <Moon className="h-4 w-4 text-indigo-500" />
-            <p className="text-xs text-slate-500">Night shift P/L (all time)</p>
-          </div>
-          <p className={`text-lg font-bold ${finance.nightNetProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-            {formatCurrency(finance.nightNetProfit)}
+        <Card className="!p-4 border-l-4 border-l-amber-500">
+          <p className="text-xs text-slate-500">This month net</p>
+          <p
+            className={`text-lg font-bold mt-1 ${finance.thisMonth.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+          >
+            {formatCurrency(finance.thisMonth.netProfit)}
           </p>
         </Card>
       </div>

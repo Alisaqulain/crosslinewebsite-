@@ -18,6 +18,8 @@ import type {
   ShiftCategory,
 } from "@/lib/types";
 import { getFinanceSummary } from "@/lib/finance";
+import { FinanceExportPanel } from "@/components/admin/FinanceExportPanel";
+import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
 import { IndianRupee, TrendingDown, TrendingUp, Loader2, Plus, Sun, Moon } from "lucide-react";
 
 export default function AdminFinancePage() {
@@ -31,7 +33,7 @@ export default function AdminFinancePage() {
     type: "income" as TransactionType,
     category: "other" as TransactionCategory,
     shift: "day" as ShiftCategory,
-    amount: 0,
+    amount: "" as string | number,
     note: "",
   });
 
@@ -57,10 +59,11 @@ export default function AdminFinancePage() {
   };
 
   const addOrUpdateEntry = async () => {
-    if (!form.amount) return;
+    const amount = parseAmount(form.amount);
+    if (!amount) return;
     if (editingId) {
       const next = entries.map((e) =>
-        e.id === editingId ? { ...e, ...form } : e
+        e.id === editingId ? { ...e, ...form, amount } : e
       );
       await saveEntries(next);
       setEditingId(null);
@@ -68,10 +71,11 @@ export default function AdminFinancePage() {
       const entry: FinanceEntry = {
         id: `FE-${Date.now().toString(36).toUpperCase()}`,
         ...form,
+        amount,
       };
       await saveEntries([entry, ...entries]);
     }
-    setForm({ ...form, amount: 0, note: "" });
+    setForm({ ...form, amount: "", note: "" });
   };
 
   const startEdit = (e: FinanceEntry) => {
@@ -103,6 +107,8 @@ export default function AdminFinancePage() {
 
   return (
     <AdminShell title="Income & Expense Dashboard">
+      <FinanceExportPanel store={store} />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         <StatCard label="Total Income" value={formatCurrency(summary.totalIncome)} icon={TrendingUp} color="#39B54A" />
         <StatCard label="Total Expense" value={formatCurrency(summary.totalExpense)} icon={TrendingDown} color="#ED1C24" />
@@ -188,7 +194,11 @@ export default function AdminFinancePage() {
           </div>
           <div>
             <Label>Amount (₹)</Label>
-            <Input type="number" value={form.amount || ""} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} className="mt-1" />
+            <AmountInput
+              value={form.amount}
+              onChange={(amount) => setForm({ ...form, amount })}
+              className="mt-1"
+            />
           </div>
           <div>
             <Label>Note</Label>

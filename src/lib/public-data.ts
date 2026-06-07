@@ -1,12 +1,14 @@
-import type { AppStore } from "./types";
+import type { AppStore, StadiumMatch } from "./types";
 import { defaultStore } from "./seed";
 import { getBookingSlotsForDate } from "./slots";
 
 export type PublicDataPayload = Pick<
   AppStore,
-  "blockedDates" | "gallery" | "siteContent" | "tournaments" | "academy" | "matches"
+  "blockedDates" | "gallery" | "siteContent" | "tournaments" | "academy"
 > & {
   slots: AppStore["slots"];
+  matches: StadiumMatch[];
+  pastMatches: StadiumMatch[];
 };
 
 export function toPublicPayload(store: AppStore, date?: string): PublicDataPayload {
@@ -18,12 +20,13 @@ export function toPublicPayload(store: AppStore, date?: string): PublicDataPaylo
 
   return {
     slots,
+    matches: [],
+    pastMatches: [],
     blockedDates: store.blockedDates,
     gallery: store.gallery,
     siteContent: store.siteContent,
     tournaments: store.tournaments,
     academy: store.academy,
-    matches: store.matches.filter((m) => m.status === "upcoming"),
   };
 }
 

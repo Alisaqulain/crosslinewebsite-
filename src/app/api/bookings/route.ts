@@ -59,8 +59,6 @@ export async function POST(req: NextRequest) {
       slotId: body.slotId,
       slotLabel: slot.label,
       slotPrice: slot.price,
-      teamName: body.teamName?.trim() ?? "",
-      numberOfPlayers: Number(body.numberOfPlayers) || 0,
       matchType: (body.matchType as MatchType) ?? "friendly",
       specialRequest: body.specialRequest?.trim(),
       status: walkIn ? "approved" : "pending",
@@ -82,8 +80,8 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      if (!booking.customerName || !booking.phone || !booking.date || !booking.teamName) {
-        return NextResponse.json({ error: "Name, phone, team, and date are required" }, { status: 400 });
+      if (!booking.customerName || !booking.phone || !booking.date) {
+        return NextResponse.json({ error: "Name, phone, and date are required" }, { status: 400 });
       }
       if (ballsUsed > 0 && !ballQuality) {
         return NextResponse.json({ error: "Select ball quality" }, { status: 400 });
@@ -97,8 +95,7 @@ export async function POST(req: NextRequest) {
       !booking.email ||
       !booking.phone ||
       !booking.address ||
-      !booking.date ||
-      !booking.teamName
+      !booking.date
     ) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }

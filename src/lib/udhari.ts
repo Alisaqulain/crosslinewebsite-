@@ -1,4 +1,5 @@
-import type { Booking } from "./types";
+import type { AppStore, Booking, StadiumMatch } from "./types";
+import { completedMatches, matchAmountReceived, matchUdhari } from "./matches";
 
 export function bookingAmountReceived(b: Booking): number {
   return typeof b.amountReceived === "number" ? b.amountReceived : 0;
@@ -10,11 +11,21 @@ export function bookingUdhari(b: Booking): number {
   return Math.max(0, b.slotPrice - bookingAmountReceived(b));
 }
 
+export type UdhariSource = "walk-in" | "online" | "old-session";
+
 export interface UdhariAccount {
-  booking: Booking;
+  id: string;
+  kind: "booking" | "old-session";
+  customerName: string;
+  phone: string;
+  date: string;
+  slotLabel: string;
+  sessionPrice: number;
   received: number;
   udhari: number;
-  source: "walk-in" | "online";
+  source: UdhariSource;
+  booking?: Booking;
+  oldSession?: StadiumMatch;
 }
 
 export interface UdhariSummary {
@@ -26,15 +37,42 @@ export interface UdhariSummary {
   accounts: UdhariAccount[];
 }
 
+function bookingAccount(b: Booking): UdhariAccount {
+  return {
+    id: b.id,
+    kind: "booking",
+    customerName: b.customerName,
+    phone: b.phone,
+    date: b.date,
+    slotLabel: b.slotLabel,
+    sessionPrice: b.slotPrice,
+    received: bookingAmountReceived(b),
+    udhari: bookingUdhari(b),
+    source: b.walkIn ? "walk-in" : "online",
+    booking: b,
+  };
+}
+
+function oldSessionAccount(m: StadiumMatch): UdhariAccount {
+  return {
+    id: m.id,
+    kind: "old-session",
+    customerName: m.customerName,
+    phone: m.phone ?? "",
+    date: m.date,
+    slotLabel: m.slotLabel,
+    sessionPrice: m.slotPrice,
+    received: matchAmountReceived(m),
+    udhari: matchUdhari(m),
+    source: "old-session",
+    oldSession: m,
+  };
+}
+
 export function getUdhariSummary(bookings: Booking[]): UdhariSummary {
   const approved = bookings.filter((b) => b.status === "approved");
-  const accounts: UdhariAccount[] = approved
-    .map((booking) => ({
-      booking,
-      received: bookingAmountReceived(booking),
-      udhari: bookingUdhari(booking),
-      source: booking.walkIn ? ("walk-in" as const) : ("online" as const),
-    }))
+  const accounts = approved
+    .map(bookingAccount)
     .filter((a) => a.udhari > 0)
     .sort((a, b) => b.udhari - a.udhari);
 
@@ -44,6 +82,24 @@ export function getUdhariSummary(bookings: Booking[]): UdhariSummary {
     totalBilled: approved.reduce((s, b) => s + b.slotPrice, 0),
     countWithUdhari: accounts.length,
     approvedCount: approved.length,
+    accounts,
+  };
+}
+
+/** Bookings + old sessions — full udhari for admin & dashboard */
+export function getStoreUdhariSummary(store: AppStore): UdhariSummary {
+  const bookingRows = store.bookings.filter((b) => b.status === "approved").map(bookingAccount);
+  const sessionRows = completedMatches(store).map(oldSessionAccount);
+  const all = [...bookingRows, ...sessionRows];
+
+  const accounts = all.filter((a) => a.udhari > 0).sort((a, b) => b.udhari - a.udhari);
+
+  return {
+    totalUdhari: accounts.reduce((s, a) => s + a.udhari, 0),
+    totalReceived: all.reduce((s, a) => s + a.received, 0),
+    totalBilled: all.reduce((s, a) => s + a.sessionPrice, 0),
+    countWithUdhari: accounts.length,
+    approvedCount: all.length,
     accounts,
   };
 }

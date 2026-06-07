@@ -99,6 +99,10 @@ export function FinancePeriodPanel({
             positive
             icon={<UserRound className="h-3.5 w-3.5" />}
           />
+          {period.income.oldSessions > 0 && (
+            <Row label="Old sessions (backfill)" value={period.income.oldSessions} positive />
+          )}
+          <Row label="Other income" value={period.income.otherIncome} positive />
           <Row label="Other manual income" value={period.income.manual} positive />
           <Row label="Total income" value={period.income.total} positive />
         </div>

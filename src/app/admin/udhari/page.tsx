@@ -1,29 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input, Label } from "@/components/ui/Input";
+import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
+import { Label } from "@/components/ui/Input";
 import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
-import { fetchAdminStore, patchBooking } from "@/lib/api-client";
+import { fetchAdminStore, patchAdmin, patchBooking } from "@/lib/api-client";
 import { getOwnerName } from "@/lib/owners";
-import { bookingAmountReceived, bookingUdhari, getUdhariSummary } from "@/lib/udhari";
+import { matchAmountReceived, normalizeMatch } from "@/lib/matches";
+import { bookingAmountReceived, getStoreUdhariSummary, type UdhariAccount } from "@/lib/udhari";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { AppStore, Booking, StadiumOwner } from "@/lib/types";
+import type { AppStore, Booking, StadiumMatch, StadiumOwner } from "@/lib/types";
 import { IndianRupee, Loader2, Save } from "lucide-react";
+
+type PayTarget =
+  | { kind: "booking"; data: Booking }
+  | { kind: "old-session"; data: StadiumMatch };
 
 export default function AdminUdhariPage() {
   const { toast } = useToast();
   const [store, setStore] = useState<AppStore | null>(null);
   const [owners, setOwners] = useState<StadiumOwner[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [matches, setMatches] = useState<StadiumMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [payTarget, setPayTarget] = useState<Booking | null>(null);
+  const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
   const [paymentOwnerId, setPaymentOwnerId] = useState("");
+  const [amountInput, setAmountInput] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,7 +38,10 @@ export default function AdminUdhariPage() {
       const { store: s } = await fetchAdminStore();
       setStore(s);
       setOwners(s.owners ?? []);
-      setBookings(s.bookings);
+      const cleaned = (s.matches ?? [])
+        .map((m: unknown) => normalizeMatch(m as Record<string, unknown>))
+        .filter((m: StadiumMatch | null): m is StadiumMatch => m !== null);
+      setMatches(cleaned);
     } catch {
       toast("Failed to load", "error");
     } finally {
@@ -43,39 +53,73 @@ export default function AdminUdhariPage() {
     load();
   }, [load]);
 
-  const summary = getUdhariSummary(bookings);
+  const summary = useMemo(
+    () => (store ? getStoreUdhariSummary(store) : null),
+    [store]
+  );
 
-  const [amountInput, setAmountInput] = useState("");
-
-  const openPayment = (b: Booking) => {
-    setPayTarget(b);
-    setAmountInput(String(bookingAmountReceived(b) || ""));
-    setPaymentOwnerId(b.receivedByOwnerId ?? "");
+  const openPayment = (account: UdhariAccount) => {
+    if (account.kind === "booking" && account.booking) {
+      setPayTarget({ kind: "booking", data: account.booking });
+      setAmountInput(String(bookingAmountReceived(account.booking) || ""));
+      setPaymentOwnerId(account.booking.receivedByOwnerId ?? "");
+    } else if (account.kind === "old-session" && account.oldSession) {
+      setPayTarget({ kind: "old-session", data: account.oldSession });
+      setAmountInput(String(matchAmountReceived(account.oldSession) || ""));
+      setPaymentOwnerId(account.oldSession.receivedByOwnerId ?? "");
+    }
   };
 
+  const paySessionPrice = payTarget?.data.slotPrice ?? 0;
+
+  const payUdhari =
+    payTarget && !Number.isNaN(parseAmount(amountInput))
+      ? Math.max(0, paySessionPrice - parseAmount(amountInput))
+      : 0;
+
+  const payLabel =
+    payTarget?.kind === "old-session"
+      ? "Old session"
+      : payTarget?.kind === "booking" && payTarget.data.walkIn
+        ? "Walk-in"
+        : "Website";
+
   const savePayment = async () => {
-    if (!payTarget) return;
-    const received = Number(amountInput);
+    if (!payTarget || !store) return;
+    const received = parseAmount(amountInput);
     if (Number.isNaN(received) || received < 0) {
       toast("Enter a valid amount", "error");
       return;
     }
-    if (received > payTarget.slotPrice) {
-      toast(`Cannot exceed ${formatCurrency(payTarget.slotPrice)}`, "error");
+    if (received > paySessionPrice) {
+      toast(`Cannot exceed ${formatCurrency(paySessionPrice)}`, "error");
       return;
     }
-    if (received > 0 && !paymentOwnerId) {
+    if (received > 0 && !(paymentOwnerId || store.owners?.[0]?.id)) {
       toast("Select who received the money", "error");
       return;
     }
-    setActionId(payTarget.id);
+
+    const ownerId = paymentOwnerId || store.owners?.[0]?.id || null;
+    setActionId(payTarget.data.id);
+
     try {
-      await patchBooking(payTarget.id, {
-        recordPayment: true,
-        amountReceived: received,
-        receivedByOwnerId: paymentOwnerId || null,
-      });
-      const udhari = payTarget.slotPrice - received;
+      if (payTarget.kind === "booking") {
+        await patchBooking(payTarget.data.id, {
+          recordPayment: true,
+          amountReceived: received,
+          receivedByOwnerId: ownerId,
+        });
+      } else {
+        const updated = matches.map((m) =>
+          m.id === payTarget.data.id
+            ? { ...m, amountReceived: received, receivedByOwnerId: ownerId ?? undefined }
+            : m
+        );
+        await patchAdmin("matches", updated);
+      }
+
+      const udhari = paySessionPrice - received;
       toast(
         udhari > 0
           ? `Saved — ${formatCurrency(udhari)} udhari remaining`
@@ -91,7 +135,7 @@ export default function AdminUdhariPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !store || !summary) {
     return (
       <AdminShell title="Udhari (Credit)">
         <div className="flex justify-center py-20">
@@ -101,16 +145,12 @@ export default function AdminUdhariPage() {
     );
   }
 
-  const payUdhari =
-    payTarget && !Number.isNaN(Number(amountInput))
-      ? Math.max(0, payTarget.slotPrice - Number(amountInput))
-      : 0;
-
   return (
     <AdminShell title="Udhari — Who Owes How Much">
       <p className="text-sm text-slate-600 mb-6 max-w-2xl">
-        Track money received vs session price for approved bookings (website and walk-in).
-        Example: ₹5,000 session, ₹4,000 received → ₹1,000 udhari.
+        Only customers with pending balance (udhari) are listed here.
+        Example: session ₹3,000, received ₹2,000 → ₹1,000 udhari.
+        To add old sessions go to <strong>Old Sessions</strong>.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -122,19 +162,19 @@ export default function AdminUdhariPage() {
           <p className="text-xs text-slate-500 mt-1">{summary.countWithUdhari} customers</p>
         </Card>
         <Card className="!p-4 border-l-4 border-l-green-500">
-          <p className="text-xs text-slate-500">Cash received (approved)</p>
+          <p className="text-xs text-slate-500">Cash received</p>
           <p className="text-2xl font-bold text-green-600 mt-1">
             {formatCurrency(summary.totalReceived)}
           </p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs text-slate-500">Total billed (approved)</p>
+          <p className="text-xs text-slate-500">Total billed</p>
           <p className="text-2xl font-bold text-[var(--navy)] mt-1">
             {formatCurrency(summary.totalBilled)}
           </p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs text-slate-500">Approved bookings</p>
+          <p className="text-xs text-slate-500">Sessions tracked</p>
           <p className="text-2xl font-bold text-[var(--navy)] mt-1">{summary.approvedCount}</p>
         </Card>
       </div>
@@ -146,29 +186,25 @@ export default function AdminUdhariPage() {
         </h2>
         <ResponsiveTable
           data={summary.accounts}
-          rowKey={(a) => a.booking.id}
-          emptyMessage="No pending udhari — all approved bookings are fully paid"
+          rowKey={(a) => a.id}
+          emptyMessage="No pending udhari — all sessions are fully paid"
           columns={[
             {
               key: "customer",
               header: "Customer",
               render: (a) => (
                 <div>
-                  <p className="font-semibold text-[var(--navy)]">{a.booking.customerName}</p>
-                  <p className="text-xs text-slate-500">{a.booking.phone}</p>
+                  <p className="font-semibold text-[var(--navy)]">{a.customerName}</p>
+                  {a.phone ? <p className="text-xs text-slate-500">{a.phone}</p> : null}
                 </div>
               ),
             },
             {
-              key: "match",
-              header: "Match / Date",
+              key: "date",
+              header: "Date / Slot",
               render: (a) => (
                 <span className="text-sm">
-                  {a.booking.teamName}
-                  <br />
-                  <span className="text-xs text-slate-500">
-                    {formatDate(a.booking.date)} · {a.booking.slotLabel}
-                  </span>
+                  {formatDate(a.date)} · {a.slotLabel}
                 </span>
               ),
             },
@@ -178,19 +214,25 @@ export default function AdminUdhariPage() {
               render: (a) => (
                 <span
                   className={
-                    a.source === "walk-in"
-                      ? "text-xs font-semibold text-amber-700"
-                      : "text-xs font-semibold text-slate-600"
+                    a.source === "old-session"
+                      ? "text-xs font-semibold text-blue-700"
+                      : a.source === "walk-in"
+                        ? "text-xs font-semibold text-amber-700"
+                        : "text-xs font-semibold text-slate-600"
                   }
                 >
-                  {a.source === "walk-in" ? "Walk-in" : "Website"}
+                  {a.source === "old-session"
+                    ? "Old session"
+                    : a.source === "walk-in"
+                      ? "Walk-in"
+                      : "Website"}
                 </span>
               ),
             },
             {
               key: "total",
               header: "Session price",
-              render: (a) => formatCurrency(a.booking.slotPrice),
+              render: (a) => formatCurrency(a.sessionPrice),
             },
             {
               key: "received",
@@ -198,6 +240,17 @@ export default function AdminUdhariPage() {
               render: (a) => (
                 <span className="text-green-700 font-medium">{formatCurrency(a.received)}</span>
               ),
+            },
+            {
+              key: "owner",
+              header: "Received by",
+              render: (a) => {
+                const ownerId =
+                  a.kind === "booking"
+                    ? a.booking?.receivedByOwnerId
+                    : a.oldSession?.receivedByOwnerId;
+                return ownerId ? getOwnerName(store, ownerId) : "—";
+              },
             },
             {
               key: "udhari",
@@ -210,75 +263,8 @@ export default function AdminUdhariPage() {
               key: "actions",
               header: "",
               render: (a) => (
-                <Button size="sm" variant="outline" onClick={() => openPayment(a.booking)}>
+                <Button size="sm" variant="outline" onClick={() => openPayment(a)}>
                   Update payment
-                </Button>
-              ),
-            },
-          ]}
-        />
-      </Card>
-
-      <Card className="mt-8 p-0 md:p-6">
-        <h2 className="font-semibold text-[var(--navy)] mb-4 px-4 pt-4 md:px-0 md:pt-0">
-          All approved bookings — payment status
-        </h2>
-        <ResponsiveTable
-          data={bookings.filter((b) => b.status === "approved")}
-          rowKey={(b) => b.id}
-          emptyMessage="No approved bookings"
-          columns={[
-            {
-              key: "customer",
-              header: "Customer",
-              render: (b) => b.customerName,
-            },
-            {
-              key: "date",
-              header: "Date",
-              render: (b) => formatDate(b.date),
-            },
-            {
-              key: "type",
-              header: "Type",
-              render: (b) => (b.walkIn ? "Walk-in" : "Website"),
-            },
-            {
-              key: "price",
-              header: "Price",
-              render: (b) => formatCurrency(b.slotPrice),
-            },
-            {
-              key: "received",
-              header: "Received",
-              render: (b) => formatCurrency(bookingAmountReceived(b)),
-            },
-            {
-              key: "owner",
-              header: "Received by",
-              render: (b) =>
-                b.receivedByOwnerId && store
-                  ? getOwnerName(store, b.receivedByOwnerId)
-                  : "—",
-            },
-            {
-              key: "udhari",
-              header: "Udhari",
-              render: (b) => {
-                const u = bookingUdhari(b);
-                return u > 0 ? (
-                  <span className="text-red-600 font-semibold">{formatCurrency(u)}</span>
-                ) : (
-                  <span className="text-green-600 text-xs">Paid</span>
-                );
-              },
-            },
-            {
-              key: "actions",
-              header: "",
-              render: (b) => (
-                <Button size="sm" variant="ghost" className="text-xs" onClick={() => openPayment(b)}>
-                  Amount received
                 </Button>
               ),
             },
@@ -291,14 +277,13 @@ export default function AdminUdhariPage() {
           <Card className="w-full max-w-md space-y-4 shadow-xl">
             <h3 className="font-semibold text-[var(--navy)]">Record amount received</h3>
             <p className="text-sm text-slate-600">
-              {payTarget.customerName} · {payTarget.teamName}
+              {payTarget.data.customerName}
               <br />
-              {formatDate(payTarget.date)} · {payTarget.slotLabel}
-              {payTarget.walkIn ? " · Walk-in" : " · Website"}
+              {formatDate(payTarget.data.date)} · {payTarget.data.slotLabel} · {payLabel}
             </p>
             <div className="rounded-xl admin-subtle p-3 text-sm space-y-1">
               <p>
-                Session price: <strong>{formatCurrency(payTarget.slotPrice)}</strong>
+                Session price: <strong>{formatCurrency(paySessionPrice)}</strong>
               </p>
               <p>
                 Udhari after save:{" "}
@@ -309,13 +294,10 @@ export default function AdminUdhariPage() {
             </div>
             <div>
               <Label>Amount received (₹)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={payTarget.slotPrice}
+              <AmountInput
                 value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
-                placeholder={`0 – ${payTarget.slotPrice}`}
+                onChange={setAmountInput}
+                placeholder={`Up to ${paySessionPrice}`}
                 className="mt-1"
               />
             </div>
@@ -324,13 +306,13 @@ export default function AdminUdhariPage() {
               value={paymentOwnerId}
               onChange={setPaymentOwnerId}
               label="Received by (owner)"
-              required={Number(amountInput) > 0}
+              required={parseAmount(amountInput) > 0}
             />
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => setPayTarget(null)}>
                 Cancel
               </Button>
-              <Button onClick={savePayment} disabled={actionId === payTarget.id}>
+              <Button onClick={savePayment} disabled={actionId === payTarget.data.id}>
                 <Save className="h-4 w-4" /> Save
               </Button>
             </div>

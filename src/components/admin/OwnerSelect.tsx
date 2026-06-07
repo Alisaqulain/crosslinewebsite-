@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Label, Select } from "@/components/ui/Input";
 import type { StadiumOwner } from "@/lib/types";
 
@@ -18,6 +19,12 @@ export function OwnerSelect({
   required?: boolean;
   label?: string;
 }) {
+  useEffect(() => {
+    if (required && owners.length > 0 && !value) {
+      onChange(owners[0].id);
+    }
+  }, [required, owners, value, onChange]);
+
   if (owners.length === 0) {
     return (
       <p className="text-sm text-amber-700">
@@ -29,11 +36,13 @@ export function OwnerSelect({
     );
   }
 
+  const selectValue = value || (required ? owners[0]?.id ?? "" : "");
+
   return (
     <div>
       <Label>{label}</Label>
       <Select
-        value={value}
+        value={selectValue}
         onChange={(e) => onChange(e.target.value)}
         className={className ?? "mt-1"}
         required={required}

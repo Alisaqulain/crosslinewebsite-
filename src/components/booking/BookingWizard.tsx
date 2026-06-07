@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatTimeRange } from "@/lib/utils";
 import { validateEmail, validatePhone, validateRequired, normalizePhone } from "@/lib/validation";
 import { createBooking, fetchPublic } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
@@ -70,7 +70,7 @@ function SlotPricingCards({
             >
               <p className="font-bold text-[var(--navy)]">{s.label}</p>
               <p className="text-sm text-[var(--text-muted)] mt-1">
-                {s.start} – {s.end}
+                {formatTimeRange(s.start, s.end)}
               </p>
               <p className="mt-3 text-xl font-bold text-[var(--brand-red)]">{formatCurrency(s.price)}</p>
               {s.statusLabel && (
@@ -99,8 +99,6 @@ export function BookingWizard() {
     email: "",
     phone: "",
     address: "",
-    teamName: "",
-    numberOfPlayers: "",
     matchType: "friendly" as MatchType,
     specialRequest: "",
   });
@@ -132,9 +130,6 @@ export function BookingWizard() {
     if (validateEmail(form.email)) e.email = validateEmail(form.email)!;
     if (validatePhone(form.phone)) e.phone = validatePhone(form.phone)!;
     if (validateRequired(form.address, "Address")) e.address = validateRequired(form.address, "Address")!;
-    if (validateRequired(form.teamName, "Team name")) e.teamName = validateRequired(form.teamName, "Team name")!;
-    if (!form.numberOfPlayers || Number(form.numberOfPlayers) < 1)
-      e.numberOfPlayers = "Enter number of players";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -150,8 +145,6 @@ export function BookingWizard() {
         address: form.address,
         date: selectedDate,
         slotId: selectedSlot,
-        teamName: form.teamName,
-        numberOfPlayers: Number(form.numberOfPlayers),
         matchType: form.matchType,
         specialRequest: form.specialRequest,
       });
@@ -298,29 +291,6 @@ export function BookingWizard() {
                 {errors.address && <p className="text-xs text-red-600 mt-1">{errors.address}</p>}
               </div>
               <div>
-                <Label htmlFor="teamName">Team Name *</Label>
-                <Input
-                  id="teamName"
-                  value={form.teamName}
-                  onChange={(e) => setForm({ ...form, teamName: e.target.value })}
-                />
-                {errors.teamName && <p className="text-xs text-red-600 mt-1">{errors.teamName}</p>}
-              </div>
-              <div>
-                <Label htmlFor="players">Number of Players *</Label>
-                <Input
-                  id="players"
-                  type="number"
-                  min={1}
-                  max={22}
-                  value={form.numberOfPlayers}
-                  onChange={(e) => setForm({ ...form, numberOfPlayers: e.target.value })}
-                />
-                {errors.numberOfPlayers && (
-                  <p className="text-xs text-red-600 mt-1">{errors.numberOfPlayers}</p>
-                )}
-              </div>
-              <div>
                 <Label htmlFor="matchType">Match Type</Label>
                 <Select
                   id="matchType"
@@ -368,7 +338,7 @@ export function BookingWizard() {
               <div className="flex justify-between gap-4">
                 <dt className="text-[var(--text-muted)]">Time</dt>
                 <dd className="text-right">
-                  {slot?.start} – {slot?.end}
+                  {slot ? formatTimeRange(slot.start, slot.end) : "—"}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-[var(--border)] pt-2">

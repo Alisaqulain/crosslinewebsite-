@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, updateStore } from "@/lib/db";
 import { isAdminRequest, unauthorized } from "@/lib/auth";
+import { syncBallUsageFromOtherIncomes } from "@/lib/ball-stock";
 import { getFinanceSummary } from "@/lib/finance";
-import type { AppStore } from "@/lib/types";
+import type { AppStore, OtherIncome } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   if (!isAdminRequest(req)) return unauthorized();
@@ -44,9 +45,14 @@ export async function PATCH(req: NextRequest) {
         case "owners":
           next.owners = data;
           break;
-        case "otherIncomes":
-          next.otherIncomes = data;
+        case "otherIncomes": {
+          const incomes = data as OtherIncome[];
+          const synced = syncBallUsageFromOtherIncomes(s, incomes);
+          if (synced.error) throw new Error(synced.error);
+          next.otherIncomes = incomes;
+          next.ballUsage = synced.ballUsage;
           break;
+        }
         case "otherExpenses":
           next.otherExpenses = data;
           break;

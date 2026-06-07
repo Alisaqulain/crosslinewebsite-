@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { SectionCTA } from "@/components/ui/SectionCTA";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatTimeRange } from "@/lib/utils";
 import type { TimeSlot } from "@/lib/types";
 import { Calendar } from "lucide-react";
 
@@ -24,7 +24,7 @@ export function BookingCTA({ slots }: { slots: TimeSlot[] }) {
             <ScrollReveal key={s.id} delay={i * 0.1}>
               <div className="glass-card rounded-2xl p-5 text-center hover:bg-white/15 transition-colors">
                 <p className="font-bold">{s.label}</p>
-                <p className="text-xs text-slate-300 mt-1">{s.start} – {s.end}</p>
+                <p className="text-xs text-slate-300 mt-1">{formatTimeRange(s.start, s.end)}</p>
                 <p className="mt-3 text-2xl font-extrabold text-[var(--cricket-green-light)]">{formatCurrency(s.price)}</p>
               </div>
             </ScrollReveal>

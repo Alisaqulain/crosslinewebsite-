@@ -11,6 +11,7 @@ export function BallQualitySelect({
   onChange,
   excludeBookingId,
   excludeUsageId,
+  excludeOtherIncomeId,
   className,
   placeholder = "e.g. Practice, Tonk, Match ball",
 }: {
@@ -19,12 +20,13 @@ export function BallQualitySelect({
   onChange: (quality: BallQuality) => void;
   excludeBookingId?: string;
   excludeUsageId?: string;
+  excludeOtherIncomeId?: string;
   className?: string;
   placeholder?: string;
 }) {
   const trimmed = value.trim();
   const available = trimmed
-    ? getAvailableBalls(store, trimmed, excludeBookingId, excludeUsageId)
+    ? getAvailableBalls(store, trimmed, excludeBookingId, excludeUsageId, excludeOtherIncomeId)
     : 0;
 
   return (

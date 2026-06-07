@@ -61,8 +61,8 @@ export interface Booking {
   slotId: string;
   slotLabel: string;
   slotPrice: number;
-  teamName: string;
-  numberOfPlayers: number;
+  teamName?: string;
+  numberOfPlayers?: number;
   matchType: MatchType;
   specialRequest?: string;
   status: BookingStatus;
@@ -97,18 +97,23 @@ export interface BallUsage {
   notes?: string;
   /** Links usage to an approved booking */
   bookingId?: string;
+  /** Links usage to a ball sale in other income */
+  otherIncomeId?: string;
 }
 
 export interface StadiumMatch {
   id: string;
-  title: string;
-  teamA: string;
-  teamB: string;
+  customerName: string;
+  phone?: string;
   date: string;
-  time: string;
-  ground: string;
-  status: StadiumMatchStatus;
+  slotId: string;
+  slotLabel: string;
+  slotPrice: number;
+  amountReceived?: number;
+  receivedByOwnerId?: string;
+  matchType: MatchType;
   notes?: string;
+  status: StadiumMatchStatus;
 }
 
 export interface DieselExpense {
@@ -135,7 +140,7 @@ export interface OtherExpense {
   ownerId?: string;
 }
 
-/** Extra income — sponsorship, rent, misc (not booking) */
+/** Extra income — sponsorship, rent, ball sale, misc (not booking) */
 export interface OtherIncome {
   id: string;
   date: string;
@@ -145,6 +150,11 @@ export interface OtherIncome {
   shift: ShiftCategory;
   note?: string;
   ownerId?: string;
+  /** When category is Ball sale */
+  ballQuality?: string;
+  ballsSold?: number;
+  /** Sale price for one ball (total amount = pricePerBall × ballsSold) */
+  pricePerBall?: number;
 }
 
 export interface FinanceEntry {

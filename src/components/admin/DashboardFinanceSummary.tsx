@@ -27,8 +27,11 @@ export function DashboardFinanceSummary({
           </p>
           <p className="text-2xl font-bold text-green-700 mt-1">{formatCurrency(finance.totalIncome)}</p>
           <p className="text-[10px] text-green-700/80 mt-1">
-            Bookings {formatCurrency(finance.bookingCashIncome)} + other{" "}
-            {formatCurrency(finance.otherIncomeTotal)}
+            Bookings {formatCurrency(finance.bookingCashIncome)}
+            {finance.oldSessionIncomeTotal > 0 && (
+              <> + old sessions {formatCurrency(finance.oldSessionIncomeTotal)}</>
+            )}
+            {" "}+ other {formatCurrency(finance.otherIncomeTotal)}
           </p>
         </div>
         <div className="p-4 rounded-xl bg-red-50 border border-red-200">
@@ -149,7 +152,11 @@ export function DashboardFinanceSummary({
                     <span className="text-xs text-slate-400"> ({o.incomeCount} entries)</span>
                   </p>
                   <p className="text-xs text-slate-500 pl-2">
-                    Bookings {formatCurrency(o.bookingIncome)} · Other {formatCurrency(o.otherIncome)}
+                    Bookings {formatCurrency(o.bookingIncome)}
+                    {o.oldSessionIncome > 0 && (
+                      <> · Old sessions {formatCurrency(o.oldSessionIncome)}</>
+                    )}
+                    {" "}· Other {formatCurrency(o.otherIncome)}
                   </p>
                   <p>
                     <span className="text-red-600 font-semibold">{formatCurrency(o.expenseTotal)}</span>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatTimeRange } from "@/lib/utils";
 import { formatSessionValidity } from "@/lib/slots";
 import type { TimeSlot } from "@/lib/types";
 import { Ban, Calendar, Clock, Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
@@ -393,7 +393,7 @@ export default function AdminSlotsPage() {
                   <div className="min-w-0">
                     <p className="font-semibold text-[var(--navy)]">{slot.label}</p>
                     <p className="text-sm text-[var(--text-muted)] mt-0.5">
-                      {slot.start} – {slot.end} · {formatCurrency(slot.price)}
+                      {formatTimeRange(slot.start, slot.end)} · {formatCurrency(slot.price)}
                     </p>
                     <p className="text-xs text-[#F7931E] font-medium mt-1">
                       {formatSessionValidity(slot)}

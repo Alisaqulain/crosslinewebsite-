@@ -185,17 +185,6 @@ export default function AdminOtherExpensesPage() {
               ))}
             </Select>
           </div>
-          <div>
-            <Label>Day / Night</Label>
-            <Select
-              value={form.shift}
-              onChange={(e) => setForm({ ...form, shift: e.target.value as ShiftCategory })}
-              className="mt-1"
-            >
-              <option value="day">Day</option>
-              <option value="night">Night</option>
-            </Select>
-          </div>
           <div className="sm:col-span-2 lg:col-span-3">
             <Label>Notes (optional)</Label>
             <Input
@@ -258,11 +247,6 @@ export default function AdminOtherExpensesPage() {
               key: "category",
               header: "Category",
               render: (e) => e.category,
-            },
-            {
-              key: "shift",
-              header: "Shift",
-              render: (e) => (e.shift === "night" ? "Night" : "Day"),
             },
             {
               key: "amount",

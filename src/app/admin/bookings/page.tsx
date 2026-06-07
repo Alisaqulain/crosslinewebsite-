@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
 import { Input, Label, Select } from "@/components/ui/Input";
 import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { BallQualitySelect } from "@/components/admin/BallQualitySelect";
@@ -17,39 +18,21 @@ import {
   deleteBooking,
 } from "@/lib/api-client";
 import { getAvailableBalls, normalizeBallQuality } from "@/lib/ball-stock";
+import { BallStockBar } from "@/components/admin/BallStockBar";
 import { getBallStock } from "@/lib/finance";
 import { useToast } from "@/components/ui/Toast";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { isSessionActiveOnDate } from "@/lib/slots";
+import { formatCurrency, formatDate, formatTimeRange } from "@/lib/utils";
+import { getBookingSlotsForDate } from "@/lib/slots";
 import { getQualityLabel } from "@/lib/qualities";
 import { bookingAmountReceived, bookingUdhari } from "@/lib/udhari";
-import type { AppStore, BallQuality, Booking, BookingStatus, TimeSlot } from "@/lib/types";
-import { Check, X, Loader2, Package, Plus, IndianRupee, Save, Trash2 } from "lucide-react";
+import type { AppStore, BallQuality, Booking, BookingSlotView, BookingStatus } from "@/lib/types";
+import { Check, X, Loader2, Plus, IndianRupee, Save, Trash2 } from "lucide-react";
 
 function parseBallQuantity(value: string, max: number): number {
   if (value.trim() === "") return 0;
   const n = parseInt(value, 10);
   if (Number.isNaN(n) || n < 0) return 0;
   return Math.min(n, max);
-}
-
-function BallStockBar({ store }: { store: AppStore }) {
-  const stock = getBallStock(store);
-  return (
-    <div className="flex flex-wrap gap-3 mb-6">
-      {stock.map((s) => (
-        <div
-          key={s.quality}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl admin-subtle text-sm"
-        >
-          <Package className="h-4 w-4 text-[#F7931E]" />
-          <span className="text-[var(--text-muted)]">{s.label}:</span>
-          <span className="font-bold text-[var(--navy)]">{s.remaining}</span>
-          <span className="text-xs text-slate-400">available</span>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export default function AdminBookingsPage() {
@@ -72,13 +55,10 @@ export default function AdminBookingsPage() {
   const [showWalkIn, setShowWalkIn] = useState(false);
   const [walkInSaving, setWalkInSaving] = useState(false);
   const [walkIn, setWalkIn] = useState({
-    teamA: "",
-    teamB: "",
     customerName: "",
     phone: "",
     date: new Date().toISOString().split("T")[0],
     slotId: "",
-    numberOfPlayers: 11,
     ballQuality: "" as BallQuality,
     ballsUsed: 0,
     amountReceived: "" as string | number,
@@ -108,8 +88,15 @@ export default function AdminBookingsPage() {
     load();
   }, [load]);
 
-  const slots: TimeSlot[] =
-    store?.slots.filter((s) => s.available && isSessionActiveOnDate(s, walkIn.date)) ?? [];
+  const walkInSlots: BookingSlotView[] = useMemo(
+    () =>
+      store
+        ? getBookingSlotsForDate(store, walkIn.date).filter((s) => s.available)
+        : [],
+    [store, walkIn.date]
+  );
+
+  const selectedWalkInSlot = walkInSlots.find((s) => s.id === walkIn.slotId);
   const availableForBalls =
     store && ballTarget
       ? getAvailableBalls(store, ballQuality, ballTarget.id)
@@ -153,7 +140,7 @@ export default function AdminBookingsPage() {
 
   const confirmPayment = async () => {
     if (!payTarget) return;
-    const received = Number(amountReceivedInput);
+    const received = parseAmount(amountReceivedInput);
     if (Number.isNaN(received) || received < 0) {
       toast("Enter a valid amount", "error");
       return;
@@ -258,8 +245,12 @@ export default function AdminBookingsPage() {
   };
 
   const submitWalkIn = async () => {
-    if (!walkIn.teamA.trim() || !walkIn.teamB.trim() || !walkIn.phone || !walkIn.slotId) {
-      toast("Fill both teams, phone, and session", "error");
+    if (!walkIn.phone || !walkIn.slotId) {
+      toast("Fill phone and session", "error");
+      return;
+    }
+    if (!selectedWalkInSlot?.bookable) {
+      toast("This session is already booked on that date — pick another session or date", "error");
       return;
     }
     setWalkInSaving(true);
@@ -267,10 +258,8 @@ export default function AdminBookingsPage() {
       await createWalkInBooking({
         customerName: walkIn.customerName.trim() || "Walk-in",
         phone: walkIn.phone,
-        teamName: `${walkIn.teamA.trim()} vs ${walkIn.teamB.trim()}`,
         date: walkIn.date,
         slotId: walkIn.slotId,
-        numberOfPlayers: walkIn.numberOfPlayers,
         matchType: "friendly",
         ballQuality:
           walkInAssignBalls && walkIn.ballsUsed > 0
@@ -279,20 +268,17 @@ export default function AdminBookingsPage() {
         ballsUsed: walkInAssignBalls ? walkIn.ballsUsed : 0,
         amountReceived:
           walkIn.amountReceived !== "" && walkIn.amountReceived !== undefined
-            ? Number(walkIn.amountReceived)
+            ? parseAmount(walkIn.amountReceived)
             : undefined,
         receivedByOwnerId: walkIn.receivedByOwnerId || undefined,
       });
       toast("Direct booking saved — stock updated", "success");
       setShowWalkIn(false);
       setWalkIn({
-        teamA: "",
-        teamB: "",
         customerName: "",
         phone: "",
         date: new Date().toISOString().split("T")[0],
-        slotId: slots[0]?.id ?? "",
-        numberOfPlayers: 11,
+        slotId: walkInSlots.find((s) => s.bookable)?.id ?? walkInSlots[0]?.id ?? "",
         ballQuality: "",
         ballsUsed: 0,
         amountReceived: "",
@@ -308,10 +294,16 @@ export default function AdminBookingsPage() {
   };
 
   useEffect(() => {
-    if (slots.length && !walkIn.slotId) {
-      setWalkIn((w) => ({ ...w, slotId: slots[0].id }));
+    if (!walkInSlots.length) {
+      setWalkIn((w) => ({ ...w, slotId: "" }));
+      return;
     }
-  }, [slots, walkIn.slotId]);
+    const current = walkInSlots.find((s) => s.id === walkIn.slotId);
+    if (!current || !current.bookable) {
+      const pick = walkInSlots.find((s) => s.bookable) ?? walkInSlots[0];
+      setWalkIn((w) => ({ ...w, slotId: pick.id }));
+    }
+  }, [walkInSlots, walkIn.slotId]);
 
   return (
     <AdminShell title="Booking Management">
@@ -328,30 +320,16 @@ export default function AdminBookingsPage() {
         <Card className="mb-6 space-y-4">
           <h3 className="font-semibold text-[var(--navy)]">Direct booking (not from website)</h3>
           <p className="text-xs text-slate-500">
-            Phone or on-ground bookings — saved as approved and balls deducted from stock.
+            Phone or on-ground bookings — saved as approved. Pick any future date (e.g. 10 days
+            ahead); that session will show as booked on that day for everyone.
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
-              <Label>Team A</Label>
-              <Input
-                value={walkIn.teamA}
-                onChange={(e) => setWalkIn({ ...walkIn, teamA: e.target.value })}
-                placeholder="e.g. Lions XI"
-              />
-            </div>
-            <div>
-              <Label>Team B</Label>
-              <Input
-                value={walkIn.teamB}
-                onChange={(e) => setWalkIn({ ...walkIn, teamB: e.target.value })}
-                placeholder="e.g. Tigers"
-              />
-            </div>
-            <div>
-              <Label>Contact name (optional)</Label>
+              <Label>Contact name</Label>
               <Input
                 value={walkIn.customerName}
                 onChange={(e) => setWalkIn({ ...walkIn, customerName: e.target.value })}
+                placeholder="Walk-in"
               />
             </div>
             <div>
@@ -362,47 +340,54 @@ export default function AdminBookingsPage() {
               <Label>Date</Label>
               <Input
                 type="date"
+                min={new Date().toISOString().split("T")[0]}
                 value={walkIn.date}
                 onChange={(e) => setWalkIn({ ...walkIn, date: e.target.value })}
               />
+              {walkIn.date && (
+                <p className="text-xs text-slate-500 mt-1">{formatDate(walkIn.date)}</p>
+              )}
             </div>
             <div>
               <Label>Session</Label>
-              <Select
-                value={walkIn.slotId}
-                onChange={(e) => setWalkIn({ ...walkIn, slotId: e.target.value })}
-              >
-                {slots.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label} ({s.start}–{s.end}) — {formatCurrency(s.price)}
-                  </option>
-                ))}
-              </Select>
+              {walkInSlots.length === 0 ? (
+                <p className="text-sm text-amber-700 mt-1">No open sessions for this date.</p>
+              ) : (
+                <Select
+                  value={walkIn.slotId}
+                  onChange={(e) => setWalkIn({ ...walkIn, slotId: e.target.value })}
+                >
+                  {walkInSlots.map((s) => (
+                    <option key={s.id} value={s.id} disabled={!s.bookable}>
+                      {s.label} ({formatTimeRange(s.start, s.end)}) — {formatCurrency(s.price)}
+                      {!s.bookable ? " — Booked" : ""}
+                    </option>
+                  ))}
+                </Select>
+              )}
+              {selectedWalkInSlot && !selectedWalkInSlot.bookable && (
+                <p className="text-xs text-red-600 mt-1">{selectedWalkInSlot.statusLabel}</p>
+              )}
             </div>
             <div>
               <Label>Amount received (₹)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={slots.find((s) => s.id === walkIn.slotId)?.price}
+              <AmountInput
                 value={walkIn.amountReceived}
-                onChange={(e) => setWalkIn({ ...walkIn, amountReceived: e.target.value })}
+                onChange={(amountReceived) => setWalkIn({ ...walkIn, amountReceived })}
                 placeholder="e.g. 4000"
                 className="mt-1"
               />
-              {walkIn.slotId && (
+              {walkIn.slotId && selectedWalkInSlot && (
                 <p className="text-xs text-slate-500 mt-1">
-                  Session {formatCurrency(slots.find((s) => s.id === walkIn.slotId)?.price ?? 0)}
-                  {walkIn.amountReceived !== "" &&
-                    !Number.isNaN(Number(walkIn.amountReceived)) && (
+                  Session {formatCurrency(selectedWalkInSlot.price)}
+                  {walkIn.amountReceived !== "" && parseAmount(walkIn.amountReceived) >= 0 && (
                       <>
                         {" "}
                         · Udhari{" "}
                         {formatCurrency(
                           Math.max(
                             0,
-                            (slots.find((s) => s.id === walkIn.slotId)?.price ?? 0) -
-                              Number(walkIn.amountReceived)
+                            selectedWalkInSlot.price - parseAmount(walkIn.amountReceived)
                           )
                         )}
                       </>
@@ -477,6 +462,7 @@ export default function AdminBookingsPage() {
             onClick={submitWalkIn}
             disabled={
               walkInSaving ||
+              !selectedWalkInSlot?.bookable ||
               (walkInAssignBalls &&
                 walkIn.ballsUsed > 0 &&
                 (availableWalkIn === 0 || walkIn.ballsUsed > availableWalkIn))
@@ -521,7 +507,7 @@ export default function AdminBookingsPage() {
           <Card className="w-full max-w-md space-y-4 shadow-xl">
             <h3 className="font-semibold text-[var(--navy)]">Approve booking</h3>
             <p className="text-sm text-slate-600">
-              {approveTarget.teamName} · {formatDate(approveTarget.date)} · {approveTarget.slotLabel}
+              {approveTarget.customerName} · {formatDate(approveTarget.date)} · {approveTarget.slotLabel}
             </p>
             <p className="text-sm text-slate-500 rounded-xl admin-subtle p-3 border border-[var(--border)]">
               This session will be locked for this date. Other pending requests for the same
@@ -547,18 +533,15 @@ export default function AdminBookingsPage() {
               Amount received
             </h3>
             <p className="text-sm text-slate-600">
-              {payTarget.customerName} · {payTarget.teamName}
+              {payTarget.customerName} · {formatDate(payTarget.date)} · {payTarget.slotLabel}
               <br />
               {formatDate(payTarget.date)} · {formatCurrency(payTarget.slotPrice)} total
             </p>
             <div>
               <Label>Received (₹)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={payTarget.slotPrice}
+              <AmountInput
                 value={amountReceivedInput}
-                onChange={(e) => setAmountReceivedInput(e.target.value)}
+                onChange={setAmountReceivedInput}
                 className="mt-1"
               />
               <p className="text-xs mt-1 text-slate-500">
@@ -567,7 +550,7 @@ export default function AdminBookingsPage() {
                   {formatCurrency(
                     Math.max(
                       0,
-                      payTarget.slotPrice - (Number(amountReceivedInput) || 0)
+                      payTarget.slotPrice - parseAmount(amountReceivedInput)
                     )
                   )}
                 </strong>
@@ -579,7 +562,7 @@ export default function AdminBookingsPage() {
                 value={paymentOwnerId}
                 onChange={setPaymentOwnerId}
                 label="Money received by"
-                required={Number(amountReceivedInput) > 0}
+                required={parseAmount(amountReceivedInput) > 0}
               />
             )}
             <div className="flex gap-2 justify-end">
@@ -599,7 +582,7 @@ export default function AdminBookingsPage() {
           <Card className="w-full max-w-md space-y-4 shadow-xl">
             <h3 className="font-semibold text-[var(--navy)]">Assign balls (after match)</h3>
             <p className="text-sm text-slate-600">
-              {ballTarget.teamName} · {formatDate(ballTarget.date)} · {ballTarget.slotLabel}
+              {ballTarget.customerName} · {formatDate(ballTarget.date)} · {ballTarget.slotLabel}
             </p>
 
             <div className="space-y-2 p-3 rounded-xl admin-subtle border border-[var(--border)]">
@@ -718,15 +701,9 @@ export default function AdminBookingsPage() {
                 ),
               },
               {
-                key: "team",
-                header: "Match",
-                render: (b) => (
-                  <span>
-                    {b.teamName}
-                    <br />
-                    <span className="text-xs capitalize">{b.matchType}</span>
-                  </span>
-                ),
+                key: "type",
+                header: "Type",
+                render: (b) => <span className="capitalize text-sm">{b.matchType}</span>,
               },
               {
                 key: "balls",
