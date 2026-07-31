@@ -6,21 +6,21 @@ import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input, Label, Select } from "@/components/ui/Input";
+import { Input, Label } from "@/components/ui/Input";
+import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { dieselAmount } from "@/lib/diesel";
 import { getOwnerName } from "@/lib/owners";
-import type { AppStore, DieselExpense, ShiftCategory, StadiumOwner } from "@/lib/types";
-import { Fuel, Loader2, Plus, Save } from "lucide-react";
+import type { AppStore, DieselExpense, StadiumOwner } from "@/lib/types";
+import { Fuel, Loader2, Moon, Plus, Save } from "lucide-react";
 
 const emptyForm = () => ({
   date: new Date().toISOString().split("T")[0],
-  liters: 0,
-  pricePerLiter: 0,
+  amount: "",
   purpose: "",
-  shift: "day" as ShiftCategory,
   ownerId: "",
 });
 
@@ -57,22 +57,27 @@ export default function AdminDieselPage() {
   };
 
   const submitEntry = () => {
-    if (!form.liters || !form.ownerId) {
-      toast("Fill liters and select owner", "error");
+    const amount = parseAmount(form.amount);
+    if (!amount || !form.ownerId) {
+      toast("Fill amount (₹) and select owner", "error");
       return;
     }
-    const totalCost = form.liters * form.pricePerLiter;
     if (editingId) {
       const next = expenses.map((e) =>
-        e.id === editingId ? { ...e, ...form, totalCost } : e
+        e.id === editingId
+          ? { ...e, date: form.date, amount, purpose: form.purpose, shift: "night" as const, ownerId: form.ownerId }
+          : e
       );
       save(next);
       setEditingId(null);
     } else {
       const entry: DieselExpense = {
         id: `DE-${Date.now().toString(36).toUpperCase()}`,
-        ...form,
-        totalCost,
+        date: form.date,
+        amount,
+        purpose: form.purpose,
+        shift: "night",
+        ownerId: form.ownerId,
       };
       save([entry, ...expenses]);
     }
@@ -83,10 +88,8 @@ export default function AdminDieselPage() {
     setEditingId(e.id);
     setForm({
       date: e.date,
-      liters: e.liters,
-      pricePerLiter: e.pricePerLiter,
+      amount: String(dieselAmount(e)),
       purpose: e.purpose,
-      shift: e.shift,
       ownerId: e.ownerId ?? "",
     });
   };
@@ -96,7 +99,7 @@ export default function AdminDieselPage() {
     save(expenses.filter((x) => x.id !== id));
   };
 
-  const total = expenses.reduce((s, e) => s + e.totalCost, 0);
+  const total = expenses.reduce((s, e) => s + dieselAmount(e), 0);
 
   if (loading) {
     return (
@@ -111,29 +114,27 @@ export default function AdminDieselPage() {
   return (
     <AdminShell title="Diesel Cost Entry">
       <Card className="mb-6">
-        <h3 className="font-semibold text-[var(--navy)] mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-[var(--navy)] mb-1 flex items-center gap-2">
           <Fuel className="h-5 w-5 text-[#F7931E]" />
           {editingId ? "Edit Diesel Expense" : "Add Diesel Expense"}
         </h3>
+        <p className="text-xs text-slate-500 mb-4 flex items-center gap-1.5">
+          <Moon className="h-3.5 w-3.5" />
+          Night match only — diesel cost in rupees (₹)
+        </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <Label>Date</Label>
             <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1" />
           </div>
           <div>
-            <Label>Liters</Label>
-            <Input type="number" value={form.liters || ""} onChange={(e) => setForm({ ...form, liters: Number(e.target.value) })} className="mt-1" />
-          </div>
-          <div>
-            <Label>Price per Liter (₹)</Label>
-            <Input type="number" value={form.pricePerLiter || ""} onChange={(e) => setForm({ ...form, pricePerLiter: Number(e.target.value) })} className="mt-1" />
-          </div>
-          <div>
-            <Label>Shift</Label>
-            <Select value={form.shift} onChange={(e) => setForm({ ...form, shift: e.target.value as ShiftCategory })} className="mt-1">
-              <option value="day">Day</option>
-              <option value="night">Night</option>
-            </Select>
+            <Label>Amount (₹)</Label>
+            <AmountInput
+              value={form.amount}
+              onChange={(amount) => setForm({ ...form, amount })}
+              className="mt-1"
+              placeholder="e.g. 2500"
+            />
           </div>
           <OwnerSelect
             owners={owners}
@@ -142,16 +143,13 @@ export default function AdminDieselPage() {
             label="Paid by / recorded by"
             required
           />
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 lg:col-span-3">
             <Label>Purpose / Note</Label>
-            <Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} className="mt-1" />
+            <Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} className="mt-1" placeholder="Floodlights generator, night session, etc." />
           </div>
         </div>
-        <p className="mt-3 text-sm text-slate-400">
-          Total: {formatCurrency(form.liters * form.pricePerLiter)}
-        </p>
         <div className="flex gap-2 mt-4">
-          <Button onClick={submitEntry} disabled={saving || !form.liters}>
+          <Button onClick={submitEntry} disabled={saving || !parseAmount(form.amount)}>
             {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             {editingId ? "Update Entry" : "Add Entry"}
           </Button>
@@ -174,13 +172,11 @@ export default function AdminDieselPage() {
           emptyMessage="No diesel entries"
           columns={[
             { key: "date", header: "Date", render: (e) => formatDate(e.date) },
-            { key: "liters", header: "Liters", render: (e) => e.liters },
-            { key: "rate", header: "Rate", render: (e) => formatCurrency(e.pricePerLiter) },
-            { key: "total", header: "Total", render: (e) => formatCurrency(e.totalCost) },
-            { key: "shift", header: "Shift", render: (e) => <span className="capitalize">{e.shift}</span> },
+            { key: "amount", header: "Amount (₹)", render: (e) => formatCurrency(dieselAmount(e)) },
+            { key: "shift", header: "Shift", render: () => <span className="capitalize text-indigo-700">Night</span> },
             { key: "purpose", header: "Purpose", render: (e) => (
               <span>
-                {e.purpose}
+                {e.purpose || "—"}
                 {store && e.ownerId && (
                   <span className="block text-xs text-red-700">By {getOwnerName(store, e.ownerId)}</span>
                 )}

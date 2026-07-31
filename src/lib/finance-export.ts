@@ -1,8 +1,10 @@
 import type { AppStore, OtherIncome } from "./types";
-import { getOwnerName } from "./owners";
+import { dieselAmount } from "./diesel";
+import { getOwnerName, resolveOwners } from "./owners";
 import { completedMatches, matchAmountReceived } from "./matches";
 import { bookingAmountReceived, getStoreUdhariSummary } from "./udhari";
 import { getQualityLabel } from "./qualities";
+import { getBallStock } from "./finance";
 import { formatDate } from "./utils";
 
 function ballPricePerUnitFromIncome(i: OtherIncome): number {
@@ -53,17 +55,79 @@ export interface UdhariExportRow {
   owner: string;
 }
 
+export interface OwnerExportRow {
+  name: string;
+  bookingIncome: number;
+  oldSessionIncome: number;
+  otherIncome: number;
+  incomeTotal: number;
+  dieselExpense: number;
+  otherExpense: number;
+  expenseTotal: number;
+  net: number;
+}
+
+export interface StockExportRow {
+  quality: string;
+  label: string;
+  purchasedAllTime: number;
+  usedAllTime: number;
+  remainingNow: number;
+  purchasedThisMonth: number;
+  usedThisMonth: number;
+}
+
 export interface FinanceReportData {
   rangeLabel: string;
+  from: string;
+  to: string;
   incomeRows: IncomeExportRow[];
   expenseRows: ExpenseExportRow[];
   udhariRows: UdhariExportRow[];
+  ownerRows: OwnerExportRow[];
+  stockRows: StockExportRow[];
   summary: {
     totalIncome: number;
     totalExpense: number;
     net: number;
     totalUdhari: number;
+    incomeBreakdown: {
+      bookings: number;
+      oldSessions: number;
+      otherIncome: number;
+      manual: number;
+    };
+    expenseBreakdown: {
+      diesel: number;
+      ballPurchase: number;
+      other: number;
+      manual: number;
+    };
+    totalBallsRemaining: number;
+    approvedBookings: number;
   };
+}
+
+export function getDateRangeLabel(from: string, to: string): string {
+  try {
+    const f = formatDate(from);
+    const t = formatDate(to);
+    return from === to ? f : `${f} → ${t}`;
+  } catch {
+    return `${from} → ${to}`;
+  }
+}
+
+export function getCalendarMonthRange(year: number, month: number): { from: string; to: string; label: string } {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const lastDay = new Date(year, month, 0).getDate();
+  const from = `${year}-${pad(month)}-01`;
+  const to = `${year}-${pad(month)}-${pad(lastDay)}`;
+  const label = new Date(year, month - 1, 1).toLocaleString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+  return { from, to, label };
 }
 
 export function getReportDateRange(monthCount: number): { from: string; to: string; label: string } {
@@ -81,6 +145,87 @@ export function getReportDateRange(monthCount: number): { from: string; to: stri
 
 function inRange(date: string, from: string, to: string) {
   return date >= from && date <= to;
+}
+
+function buildOwnerRows(store: AppStore, from: string, to: string): OwnerExportRow[] {
+  const rows = resolveOwners(store).map((owner) => ({
+    name: owner.name,
+    bookingIncome: 0,
+    oldSessionIncome: 0,
+    otherIncome: 0,
+    incomeTotal: 0,
+    dieselExpense: 0,
+    otherExpense: 0,
+    expenseTotal: 0,
+    net: 0,
+    _id: owner.id,
+  }));
+
+  const byId = new Map(rows.map((r) => [r._id, r]));
+
+  for (const b of store.bookings.filter((x) => x.status === "approved" && inRange(x.date, from, to))) {
+    if (!b.receivedByOwnerId) continue;
+    const row = byId.get(b.receivedByOwnerId);
+    if (!row) continue;
+    const amt = bookingAmountReceived(b);
+    row.bookingIncome += amt;
+    row.incomeTotal += amt;
+  }
+
+  for (const m of completedMatches(store).filter((x) => inRange(x.date, from, to))) {
+    if (!m.receivedByOwnerId) continue;
+    const row = byId.get(m.receivedByOwnerId);
+    if (!row) continue;
+    const amt = matchAmountReceived(m);
+    row.oldSessionIncome += amt;
+    row.incomeTotal += amt;
+  }
+
+  for (const i of (store.otherIncomes ?? []).filter((x) => inRange(x.date, from, to))) {
+    if (!i.ownerId) continue;
+    const row = byId.get(i.ownerId);
+    if (!row) continue;
+    row.otherIncome += i.amount;
+    row.incomeTotal += i.amount;
+  }
+
+  for (const d of store.dieselExpenses.filter((x) => inRange(x.date, from, to))) {
+    if (!d.ownerId) continue;
+    const row = byId.get(d.ownerId);
+    if (!row) continue;
+    const amt = dieselAmount(d);
+    row.dieselExpense += amt;
+    row.expenseTotal += amt;
+  }
+
+  for (const o of (store.otherExpenses ?? []).filter((x) => inRange(x.date, from, to))) {
+    if (!o.ownerId) continue;
+    const row = byId.get(o.ownerId);
+    if (!row) continue;
+    row.otherExpense += o.amount;
+    row.expenseTotal += o.amount;
+  }
+
+  return rows
+    .map(({ _id: _unused, ...r }) => ({ ...r, net: r.incomeTotal - r.expenseTotal }))
+    .sort((a, b) => b.incomeTotal - a.incomeTotal);
+}
+
+function buildStockRows(store: AppStore, from: string, to: string): StockExportRow[] {
+  const stock = getBallStock(store);
+  return stock.map((s) => ({
+    quality: s.quality,
+    label: s.label,
+    purchasedAllTime: s.purchased,
+    usedAllTime: s.used,
+    remainingNow: s.remaining,
+    purchasedThisMonth: store.ballPurchases
+      .filter((p) => p.quality === s.quality && inRange(p.date, from, to))
+      .reduce((sum, p) => sum + p.quantity, 0),
+    usedThisMonth: store.ballUsage
+      .filter((u) => u.quality === s.quality && inRange(u.date, from, to))
+      .reduce((sum, u) => sum + u.quantity, 0),
+  }));
 }
 
 export function buildFinanceReport(store: AppStore, from: string, to: string, rangeLabel: string): FinanceReportData {
@@ -161,8 +306,8 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
       date: d.date,
       dateLabel: fmtDate(d.date),
       category: "Diesel",
-      description: `${d.purpose} (${d.liters}L × ₹${d.pricePerLiter})`,
-      amount: d.totalCost,
+      description: d.purpose || "Night match diesel",
+      amount: dieselAmount(d),
       owner: getOwnerName(store, d.ownerId),
     });
   }
@@ -230,22 +375,62 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
   );
   const totalExpense = expenseRows.reduce((s, r) => s + r.amount, 0);
 
+  const incomeBreakdown = {
+    bookings: incomeRows
+      .filter((r) => r.category === "Booking")
+      .reduce((s, r) => s + (typeof r.received === "number" ? r.received : 0), 0),
+    oldSessions: incomeRows
+      .filter((r) => r.category === "Old session")
+      .reduce((s, r) => s + (typeof r.received === "number" ? r.received : 0), 0),
+    otherIncome: incomeRows
+      .filter((r) => r.category !== "Booking" && r.category !== "Old session" && r.category !== "Manual income")
+      .reduce((s, r) => s + (typeof r.received === "number" ? r.received : 0), 0),
+    manual: incomeRows
+      .filter((r) => r.category === "Manual income")
+      .reduce((s, r) => s + (typeof r.received === "number" ? r.received : 0), 0),
+  };
+
+  const expenseBreakdown = {
+    diesel: expenseRows.filter((r) => r.category === "Diesel").reduce((s, r) => s + r.amount, 0),
+    ballPurchase: expenseRows.filter((r) => r.category === "Ball purchase").reduce((s, r) => s + r.amount, 0),
+    other: expenseRows
+      .filter((r) => r.category !== "Diesel" && r.category !== "Ball purchase" && r.category !== "Manual expense")
+      .reduce((s, r) => s + r.amount, 0),
+    manual: expenseRows.filter((r) => r.category === "Manual expense").reduce((s, r) => s + r.amount, 0),
+  };
+
+  const stockRows = buildStockRows(store, from, to);
+  const ownerRows = buildOwnerRows(store, from, to);
+  const totalBallsRemaining = stockRows.reduce((s, r) => s + r.remainingNow, 0);
+  const approvedBookings = store.bookings.filter(
+    (b) => b.status === "approved" && inRange(b.date, from, to)
+  ).length;
+
   return {
     rangeLabel,
+    from,
+    to,
     incomeRows,
     expenseRows,
     udhariRows,
+    ownerRows,
+    stockRows,
     summary: {
       totalIncome: sessionIncome,
       totalExpense,
       net: sessionIncome - totalExpense,
       totalUdhari: udhariRows.reduce((s, r) => s + r.udhari, 0),
+      incomeBreakdown,
+      expenseBreakdown,
+      totalBallsRemaining,
+      approvedBookings,
     },
   };
 }
 
 export async function downloadExcelReport(data: FinanceReportData) {
   const XLSX = await import("xlsx");
+  const fmt = (n: number) => n;
 
   const incomeSheet = data.incomeRows.map((r) => ({
     Date: r.dateLabel,
@@ -278,23 +463,78 @@ export async function downloadExcelReport(data: FinanceReportData) {
     Owner: r.owner,
   }));
 
+  const ownerSheet = data.ownerRows.map((r) => ({
+    Owner: r.name,
+    "Booking income (₹)": fmt(r.bookingIncome),
+    "Old session income (₹)": fmt(r.oldSessionIncome),
+    "Other income (₹)": fmt(r.otherIncome),
+    "Total earned (₹)": fmt(r.incomeTotal),
+    "Diesel expense (₹)": fmt(r.dieselExpense),
+    "Other expense (₹)": fmt(r.otherExpense),
+    "Total expense (₹)": fmt(r.expenseTotal),
+    "Net (₹)": fmt(r.net),
+  }));
+
+  const stockSheet = data.stockRows.map((r) => ({
+    Quality: r.label,
+    "Purchased (all time)": r.purchasedAllTime,
+    "Used (all time)": r.usedAllTime,
+    "Remaining now": r.remainingNow,
+    "Purchased this month": r.purchasedThisMonth,
+    "Used this month": r.usedThisMonth,
+  }));
+
   const wb = XLSX.utils.book_new();
+  const ib = data.summary.incomeBreakdown;
+  const eb = data.summary.expenseBreakdown;
 
   XLSX.utils.book_append_sheet(
     wb,
     XLSX.utils.aoa_to_sheet([
-      ["Crossline Cricket Stadium — Finance Summary"],
+      ["Crossline Cricket Stadium — Full Finance Summary"],
       ["Period", data.rangeLabel],
+      ["Date range", `${data.from} to ${data.to}`],
       ["Generated", new Date().toLocaleString("en-IN")],
       [],
+      ["—— TOTALS ——"],
       ["Total income (cash received)", data.summary.totalIncome],
       ["Total expenses", data.summary.totalExpense],
       ["Net profit / loss", data.summary.net],
-      ["Udhari pending (in period)", data.summary.totalUdhari],
+      ["Udhari pending", data.summary.totalUdhari],
+      ["Approved bookings", data.summary.approvedBookings],
+      ["Ball stock remaining (all qualities)", data.summary.totalBallsRemaining],
       [],
-      ["Sheets: Income | Expenses | Udhari Pending"],
+      ["—— INCOME BREAKDOWN ——"],
+      ["Bookings", ib.bookings],
+      ["Old sessions", ib.oldSessions],
+      ["Other income", ib.otherIncome],
+      ["Manual income", ib.manual],
+      [],
+      ["—— EXPENSE BREAKDOWN ——"],
+      ["Diesel", eb.diesel],
+      ["Ball purchases", eb.ballPurchase],
+      ["Other expenses", eb.other],
+      ["Manual expenses", eb.manual],
+      [],
+      ["Sheets: Summary | Owners | Ball Stock | Income | Expenses | Udhari"],
     ]),
     "Summary"
+  );
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(
+      ownerSheet.length ? ownerSheet : [{ Owner: "—", "Total earned (₹)": "No owner data" }]
+    ),
+    "Owners"
+  );
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(
+      stockSheet.length ? stockSheet : [{ Quality: "—", "Remaining now": 0 }]
+    ),
+    "Ball Stock"
   );
 
   XLSX.utils.book_append_sheet(
@@ -323,7 +563,7 @@ export async function downloadExcelReport(data: FinanceReportData) {
     "Udhari"
   );
 
-  XLSX.writeFile(wb, `crossline-finance-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  XLSX.writeFile(wb, `crossline-finance-${data.rangeLabel.replace(/\s+/g, "-").toLowerCase()}.xlsx`);
 }
 
 export async function downloadPdfReport(data: FinanceReportData) {
@@ -349,7 +589,7 @@ export async function downloadPdfReport(data: FinanceReportData) {
   y += 8;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Period: ${data.rangeLabel}`, 14, y);
+  doc.text(`Period: ${data.rangeLabel} (${data.from} → ${data.to})`, 14, y);
   y += 5;
   doc.text(`Generated: ${new Date().toLocaleString("en-IN")}`, 14, y);
   y += 5;
@@ -358,9 +598,82 @@ export async function downloadPdfReport(data: FinanceReportData) {
     14,
     y
   );
-  y += 10;
+  y += 5;
+  doc.text(
+    `Bookings: ${data.summary.approvedBookings}  |  Ball stock left: ${data.summary.totalBallsRemaining} balls`,
+    14,
+    y
+  );
+  y += 8;
 
-  heading("INCOME");
+  heading("INCOME & EXPENSE BREAKDOWN");
+  autoTable(doc, {
+    startY: y,
+    head: [["Type", "Category", "Amount (₹)"]],
+    body: [
+      ["Income", "Bookings", data.summary.incomeBreakdown.bookings.toLocaleString("en-IN")],
+      ["Income", "Old sessions", data.summary.incomeBreakdown.oldSessions.toLocaleString("en-IN")],
+      ["Income", "Other income", data.summary.incomeBreakdown.otherIncome.toLocaleString("en-IN")],
+      ["Income", "Manual", data.summary.incomeBreakdown.manual.toLocaleString("en-IN")],
+      ["Income", "TOTAL", data.summary.totalIncome.toLocaleString("en-IN")],
+      ["Expense", "Diesel", data.summary.expenseBreakdown.diesel.toLocaleString("en-IN")],
+      ["Expense", "Ball purchases", data.summary.expenseBreakdown.ballPurchase.toLocaleString("en-IN")],
+      ["Expense", "Other", data.summary.expenseBreakdown.other.toLocaleString("en-IN")],
+      ["Expense", "Manual", data.summary.expenseBreakdown.manual.toLocaleString("en-IN")],
+      ["Expense", "TOTAL", data.summary.totalExpense.toLocaleString("en-IN")],
+    ],
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [30, 60, 120], textColor: 255 },
+    theme: "grid",
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+
+  heading("OWNERS — who earned & spent how much");
+  autoTable(doc, {
+    startY: y,
+    head: [["Owner", "Earned", "Expense", "Net", "Bookings", "Other inc.", "Diesel", "Other exp."]],
+    body: data.ownerRows.length
+      ? data.ownerRows.map((r) => [
+          r.name,
+          `₹${r.incomeTotal.toLocaleString("en-IN")}`,
+          `₹${r.expenseTotal.toLocaleString("en-IN")}`,
+          `₹${r.net.toLocaleString("en-IN")}`,
+          `₹${r.bookingIncome.toLocaleString("en-IN")}`,
+          `₹${r.otherIncome.toLocaleString("en-IN")}`,
+          `₹${r.dieselExpense.toLocaleString("en-IN")}`,
+          `₹${r.otherExpense.toLocaleString("en-IN")}`,
+        ])
+      : [["—", "No owner data", "", "", "", "", "", ""]],
+    styles: { fontSize: 7, cellPadding: 2 },
+    headStyles: { fillColor: [100, 50, 150], textColor: 255 },
+    theme: "grid",
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+
+  heading("BALL STOCK");
+  autoTable(doc, {
+    startY: y,
+    head: [["Quality", "Remaining", "Purchased (all)", "Used (all)", "Bought (month)", "Used (month)"]],
+    body: data.stockRows.length
+      ? data.stockRows.map((r) => [
+          r.label,
+          String(r.remainingNow),
+          String(r.purchasedAllTime),
+          String(r.usedAllTime),
+          String(r.purchasedThisMonth),
+          String(r.usedThisMonth),
+        ])
+      : [["—", "0", "0", "0", "0", "0"]],
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [50, 120, 180], textColor: 255 },
+    theme: "grid",
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+
+  heading("INCOME DETAIL");
   autoTable(doc, {
     startY: y,
     head: [
@@ -394,7 +707,7 @@ export async function downloadPdfReport(data: FinanceReportData) {
   });
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
-  heading("EXPENSES");
+  heading("EXPENSES DETAIL");
   autoTable(doc, {
     startY: y,
     head: [["Date", "Category", "Description", "Amount", "Paid by"]],
@@ -436,7 +749,7 @@ export async function downloadPdfReport(data: FinanceReportData) {
     margin: { left: 14, right: 14 },
   });
 
-  doc.save(`crossline-finance-${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`crossline-finance-${data.rangeLabel.replace(/\s+/g, "-").toLowerCase()}.pdf`);
 }
 
 /** @deprecated use buildFinanceReport */

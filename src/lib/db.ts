@@ -31,6 +31,7 @@ function mergeStore(parsed: Partial<AppStore>): AppStore {
     ballUsage: parsed.ballUsage ?? defaultStore.ballUsage,
     matches: parsed.matches ?? defaultStore.matches,
     dieselExpenses: parsed.dieselExpenses ?? defaultStore.dieselExpenses,
+    savedMonthlyReports: parsed.savedMonthlyReports ?? defaultStore.savedMonthlyReports,
     otherExpenses: parsed.otherExpenses ?? defaultStore.otherExpenses,
     otherIncomes: parsed.otherIncomes ?? defaultStore.otherIncomes,
     financeEntries: parsed.financeEntries ?? defaultStore.financeEntries,

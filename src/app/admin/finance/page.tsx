@@ -107,7 +107,14 @@ export default function AdminFinancePage() {
 
   return (
     <AdminShell title="Income & Expense Dashboard">
-      <FinanceExportPanel store={store} />
+      <FinanceExportPanel
+        store={store}
+        onReportsChange={(reports) => setStore({ ...store, savedMonthlyReports: reports })}
+        onStoreRefresh={(updated) => {
+          setStore(updated);
+          setEntries(updated.financeEntries);
+        }}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         <StatCard label="Total Income" value={formatCurrency(summary.totalIncome)} icon={TrendingUp} color="#39B54A" />

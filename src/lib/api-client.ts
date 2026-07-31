@@ -123,3 +123,47 @@ export async function createWalkInBooking(data: Record<string, unknown>) {
   if (!res.ok) throw new Error(json.error ?? "Failed to save walk-in booking");
   return json;
 }
+
+export async function clearPeriodData(from: string, to: string, confirm = false) {
+  const res = await fetch("/api/admin/clear-month", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ from, to, confirm }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Clear failed");
+  return json;
+}
+
+/** @deprecated use clearPeriodData */
+export async function clearMonthData(year: number, month: number, confirm = false) {
+  const res = await fetch("/api/admin/clear-month", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ year, month, confirm }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Clear failed");
+  return json;
+}
+
+export async function previewClearPeriod(from: string, to: string) {
+  const res = await fetch(
+    `/api/admin/clear-month?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    { headers: adminHeaders(), cache: "no-store" }
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Preview failed");
+  return json.preview as import("./clear-month").ClearPeriodPreview;
+}
+
+/** @deprecated use previewClearPeriod */
+export async function previewClearMonth(year: number, month: number) {
+  const res = await fetch(`/api/admin/clear-month?year=${year}&month=${month}`, {
+    headers: adminHeaders(),
+    cache: "no-store",
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Preview failed");
+  return json.preview as import("./clear-month").ClearPeriodPreview;
+}

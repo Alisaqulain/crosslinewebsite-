@@ -1,4 +1,5 @@
 import type { AppStore, StadiumOwner } from "./types";
+import { dieselAmount } from "./diesel";
 import { bookingAmountReceived } from "./udhari";
 import { matchAmountReceived } from "./matches";
 
@@ -42,7 +43,7 @@ export function getOwnerFinanceStats(store: AppStore): OwnerFinanceStat[] {
     const otherIncome = otherIncomeRows.reduce((s, i) => s + i.amount, 0);
 
     const dieselRows = store.dieselExpenses.filter((d) => d.ownerId === owner.id);
-    const dieselExpense = dieselRows.reduce((s, d) => s + d.totalCost, 0);
+    const dieselExpense = dieselRows.reduce((s, d) => s + dieselAmount(d), 0);
 
     const otherExpenseRows = (store.otherExpenses ?? []).filter((o) => o.ownerId === owner.id);
     const otherExpense = otherExpenseRows.reduce((s, o) => s + o.amount, 0);

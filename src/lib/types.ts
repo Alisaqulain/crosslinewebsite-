@@ -119,13 +119,30 @@ export interface StadiumMatch {
 export interface DieselExpense {
   id: string;
   date: string;
-  liters: number;
-  pricePerLiter: number;
-  totalCost: number;
+  /** Diesel cost in rupees (₹) */
+  amount: number;
   purpose: string;
+  /** Night match only — always "night" for new entries */
   shift: ShiftCategory;
   /** Who paid / recorded this expense */
   ownerId?: string;
+  /** @deprecated legacy — use amount */
+  liters?: number;
+  pricePerLiter?: number;
+  totalCost?: number;
+}
+
+export interface SavedMonthlyReport {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  createdAt: string;
+  pdfGenerated: boolean;
+  excelGenerated: boolean;
+  /** @deprecated legacy month-only backups */
+  year?: number;
+  month?: number;
 }
 
 /** Ground purchases, equipment, maintenance, etc. */
@@ -236,6 +253,7 @@ export interface AppStore {
   ballUsage: BallUsage[];
   matches: StadiumMatch[];
   dieselExpenses: DieselExpense[];
+  savedMonthlyReports: SavedMonthlyReport[];
   otherExpenses: OtherExpense[];
   otherIncomes: OtherIncome[];
   financeEntries: FinanceEntry[];

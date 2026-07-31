@@ -1,4 +1,5 @@
 import type { AppStore, BallQuality, Booking, FinanceEntry, ShiftCategory } from "./types";
+import { dieselAmount } from "./diesel";
 import { getQualityLabel, resolveBallQualities } from "./qualities";
 import { getOwnerFinanceStats } from "./owners";
 import { completedMatches, matchAmountReceived } from "./matches";
@@ -106,7 +107,7 @@ function computePeriodFinance(store: AppStore, monthKey: string, label: string):
     .reduce((s, e) => s + e.amount, 0);
   const diesel = store.dieselExpenses
     .filter((d) => inMonth(d.date, monthKey))
-    .reduce((s, d) => s + d.totalCost, 0);
+    .reduce((s, d) => s + dieselAmount(d), 0);
   const ballPurchase = store.ballPurchases
     .filter((p) => inMonth(p.date, monthKey))
     .reduce((s, p) => s + p.purchasePrice, 0);
@@ -160,7 +161,7 @@ export function getFinanceSummary(store: AppStore) {
   const bookingCashIncome = bookingCashReceived(approvedAll);
   const bookingBilledTotal = approvedAll.reduce((s, b) => s + b.slotPrice, 0);
 
-  const dieselTotal = store.dieselExpenses.reduce((s, d) => s + d.totalCost, 0);
+  const dieselTotal = store.dieselExpenses.reduce((s, d) => s + dieselAmount(d), 0);
   const ballPurchaseTotal = store.ballPurchases.reduce((s, p) => s + p.purchasePrice, 0);
   const otherExpenseTotal = (store.otherExpenses ?? []).reduce((s, o) => s + o.amount, 0);
   const otherIncomeTotal = (store.otherIncomes ?? []).reduce((s, i) => s + i.amount, 0);
@@ -216,10 +217,10 @@ export function getFinanceSummary(store: AppStore) {
 
   const dayDiesel = store.dieselExpenses
     .filter((d) => d.shift === "day")
-    .reduce((s, d) => s + d.totalCost, 0);
+    .reduce((s, d) => s + dieselAmount(d), 0);
   const nightDiesel = store.dieselExpenses
     .filter((d) => d.shift === "night")
-    .reduce((s, d) => s + d.totalCost, 0);
+    .reduce((s, d) => s + dieselAmount(d), 0);
 
   const dayOther = (store.otherExpenses ?? [])
     .filter((o) => o.shift === "day")
@@ -277,7 +278,7 @@ export function getFinanceSummary(store: AppStore) {
       date: d.date,
       type: "expense" as const,
       category: "diesel" as const,
-      amount: d.totalCost,
+      amount: dieselAmount(d),
       note: d.purpose,
       shift: d.shift,
     })),

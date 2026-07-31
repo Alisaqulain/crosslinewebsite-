@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/Button";
 import { fetchAdminStore } from "@/lib/api-client";
 import { getFinanceSummary } from "@/lib/finance";
 import { bookingUdhari, getStoreUdhariSummary } from "@/lib/udhari";
+import { getEndedSessionsNeedingPayment } from "@/lib/sessions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore } from "@/lib/types";
 import {
+  AlertTriangle,
   Calendar,
   Users,
   Package,
@@ -54,6 +56,8 @@ export default function AdminDashboardPage() {
     .slice(0, 5);
 
   const udhari = getStoreUdhariSummary(store);
+  const endedNeedingPayment = getEndedSessionsNeedingPayment(store);
+  const todayEnded = endedNeedingPayment.filter((s) => s.date === today);
 
   const quickLinks = [
     { href: "/admin/bookings", label: "Approve pending bookings" },
@@ -66,6 +70,50 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminShell title="Dashboard">
+      {endedNeedingPayment.length > 0 && (
+        <Card className="mb-6 !p-5 border-2 border-amber-400/60 bg-amber-50/80">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-amber-900 font-[family-name:var(--font-sora)]">
+                Match ended — clear amount
+              </h2>
+              <p className="text-sm text-amber-800/90 mt-1">
+                {todayEnded.length > 0
+                  ? `${todayEnded.length} session(s) ended today. Collect pending payment below.`
+                  : `${endedNeedingPayment.length} past session(s) still have pending payment.`}
+              </p>
+              <div className="mt-4 space-y-2">
+                {endedNeedingPayment.slice(0, 8).map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-white/80 border border-amber-200/80"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--navy)]">{s.customerName}</p>
+                      <p className="text-xs text-slate-500">
+                        {formatDate(s.date)} · {s.slotLabel}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">
+                        Total {formatCurrency(s.slotPrice)} · Received {formatCurrency(s.received)}
+                      </p>
+                      <p className="text-sm font-bold text-amber-800">
+                        Clear {formatCurrency(s.udhari)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Link href="/admin/bookings" className="inline-block mt-4">
+                <Button size="sm">Record payment in Bookings</Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
         <StatCard label="Pending Bookings" value={pending} icon={Calendar} color="#e31837" trend={pending > 0 ? "Needs review" : undefined} />
         <StatCard label="Approved Bookings" value={approved} icon={Users} color="#1f8a3c" />
