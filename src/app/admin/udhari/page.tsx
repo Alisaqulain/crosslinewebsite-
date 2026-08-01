@@ -10,8 +10,8 @@ import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin, patchBooking } from "@/lib/api-client";
 import { getOwnerName } from "@/lib/owners";
-import { matchAmountReceived, normalizeMatch } from "@/lib/matches";
-import { bookingAmountReceived, getStoreUdhariSummary, type UdhariAccount } from "@/lib/udhari";
+import { matchAmountReceived, matchUdhari, normalizeMatch, suggestedMatchUdhari } from "@/lib/matches";
+import { bookingAmountReceived, getStoreUdhariSummary, suggestedBookingUdhari, type UdhariAccount } from "@/lib/udhari";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore, Booking, StadiumMatch, StadiumOwner } from "@/lib/types";
@@ -31,6 +31,7 @@ export default function AdminUdhariPage() {
   const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
   const [paymentOwnerId, setPaymentOwnerId] = useState("");
   const [amountInput, setAmountInput] = useState("");
+  const [udhariInput, setUdhariInput] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,22 +61,27 @@ export default function AdminUdhariPage() {
 
   const openPayment = (account: UdhariAccount) => {
     if (account.kind === "booking" && account.booking) {
-      setPayTarget({ kind: "booking", data: account.booking });
-      setAmountInput(String(bookingAmountReceived(account.booking) || ""));
-      setPaymentOwnerId(account.booking.receivedByOwnerId ?? "");
+      const b = account.booking;
+      setPayTarget({ kind: "booking", data: b });
+      const received = bookingAmountReceived(b);
+      setAmountInput(String(received || ""));
+      setUdhariInput(
+        typeof b.udhariAmount === "number" ? String(b.udhariAmount) : String(suggestedBookingUdhari(b))
+      );
+      setPaymentOwnerId(b.receivedByOwnerId ?? "");
     } else if (account.kind === "old-session" && account.oldSession) {
-      setPayTarget({ kind: "old-session", data: account.oldSession });
-      setAmountInput(String(matchAmountReceived(account.oldSession) || ""));
-      setPaymentOwnerId(account.oldSession.receivedByOwnerId ?? "");
+      const m = account.oldSession;
+      setPayTarget({ kind: "old-session", data: m });
+      const received = matchAmountReceived(m);
+      setAmountInput(String(received || ""));
+      setUdhariInput(
+        typeof m.udhariAmount === "number" ? String(m.udhariAmount) : String(suggestedMatchUdhari(m))
+      );
+      setPaymentOwnerId(m.receivedByOwnerId ?? "");
     }
   };
 
   const paySessionPrice = payTarget?.data.slotPrice ?? 0;
-
-  const payUdhari =
-    payTarget && !Number.isNaN(parseAmount(amountInput))
-      ? Math.max(0, paySessionPrice - parseAmount(amountInput))
-      : 0;
 
   const payLabel =
     payTarget?.kind === "old-session"
@@ -87,12 +93,13 @@ export default function AdminUdhariPage() {
   const savePayment = async () => {
     if (!payTarget || !store) return;
     const received = parseAmount(amountInput);
+    const udhari = parseAmount(udhariInput);
     if (Number.isNaN(received) || received < 0) {
-      toast("Enter a valid amount", "error");
+      toast("Enter a valid amount received", "error");
       return;
     }
-    if (received > paySessionPrice) {
-      toast(`Cannot exceed ${formatCurrency(paySessionPrice)}`, "error");
+    if (Number.isNaN(udhari) || udhari < 0) {
+      toast("Enter a valid udhari amount", "error");
       return;
     }
     if (received > 0 && !(paymentOwnerId || store.owners?.[0]?.id)) {
@@ -108,18 +115,23 @@ export default function AdminUdhariPage() {
         await patchBooking(payTarget.data.id, {
           recordPayment: true,
           amountReceived: received,
+          udhariAmount: udhari,
           receivedByOwnerId: ownerId,
         });
       } else {
         const updated = matches.map((m) =>
           m.id === payTarget.data.id
-            ? { ...m, amountReceived: received, receivedByOwnerId: ownerId ?? undefined }
+            ? {
+                ...m,
+                amountReceived: received,
+                udhariAmount: udhari,
+                receivedByOwnerId: ownerId ?? undefined,
+              }
             : m
         );
         await patchAdmin("matches", updated);
       }
 
-      const udhari = paySessionPrice - received;
       toast(
         udhari > 0
           ? `Saved — ${formatCurrency(udhari)} udhari remaining`
@@ -149,8 +161,7 @@ export default function AdminUdhariPage() {
     <AdminShell title="Udhari — Who Owes How Much">
       <p className="text-sm text-slate-600 mb-6 max-w-2xl">
         Only customers with pending balance (udhari) are listed here.
-        Example: session ₹3,000, received ₹2,000 → ₹1,000 udhari.
-        To add old sessions go to <strong>Old Sessions</strong>.
+        Udhari is entered manually by admin (for discounts/deals). Example: list ₹3,000, received ₹2,500, udhari ₹500 — or ₹0 if full discount.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -283,23 +294,26 @@ export default function AdminUdhariPage() {
             </p>
             <div className="rounded-xl admin-subtle p-3 text-sm space-y-1">
               <p>
-                Session price: <strong>{formatCurrency(paySessionPrice)}</strong>
-              </p>
-              <p>
-                Udhari after save:{" "}
-                <strong className={payUdhari > 0 ? "text-red-600" : "text-green-600"}>
-                  {formatCurrency(payUdhari)}
-                </strong>
+                List price: <strong>{formatCurrency(paySessionPrice)}</strong>
               </p>
             </div>
             <div>
               <Label>Amount received (₹)</Label>
               <AmountInput
                 value={amountInput}
-                onChange={setAmountInput}
-                placeholder={`Up to ${paySessionPrice}`}
+                onChange={(v) => {
+                  setAmountInput(v);
+                  if (payTarget && typeof payTarget.data.udhariAmount !== "number") {
+                    setUdhariInput(String(Math.max(0, paySessionPrice - parseAmount(v))));
+                  }
+                }}
                 className="mt-1"
               />
+            </div>
+            <div>
+              <Label>Udhari / pending (₹) — enter manually</Label>
+              <AmountInput value={udhariInput} onChange={setUdhariInput} className="mt-1" />
+              <p className="text-xs text-slate-500 mt-1">Change for discount/deal — not always price minus received</p>
             </div>
             <OwnerSelect
               owners={owners}

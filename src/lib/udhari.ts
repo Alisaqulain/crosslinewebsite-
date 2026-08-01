@@ -5,10 +5,18 @@ export function bookingAmountReceived(b: Booking): number {
   return typeof b.amountReceived === "number" ? b.amountReceived : 0;
 }
 
-/** Remaining balance (udhari) for approved bookings */
+/** Auto udhari from list price minus received (before discount override) */
+export function suggestedBookingUdhari(b: Booking): number {
+  return Math.max(0, b.slotPrice - bookingAmountReceived(b));
+}
+
+/** Pending balance — uses manual udhariAmount when admin set it */
 export function bookingUdhari(b: Booking): number {
   if (b.status !== "approved") return 0;
-  return Math.max(0, b.slotPrice - bookingAmountReceived(b));
+  if (typeof b.udhariAmount === "number" && !Number.isNaN(b.udhariAmount)) {
+    return Math.max(0, b.udhariAmount);
+  }
+  return suggestedBookingUdhari(b);
 }
 
 export type UdhariSource = "walk-in" | "online" | "old-session";

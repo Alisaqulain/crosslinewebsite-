@@ -34,6 +34,7 @@ type SessionForm = {
   slotLabel: string;
   slotPrice: number;
   amountReceived: string | number;
+  udhariAmount: string | number;
   receivedByOwnerId: string;
   matchType: MatchType;
   notes: string;
@@ -49,6 +50,7 @@ function emptyForm(slots: AppStore["slots"]): SessionForm {
     slotLabel: slot?.label ?? "",
     slotPrice: slot?.price ?? 0,
     amountReceived: "",
+    udhariAmount: "",
     receivedByOwnerId: "",
     matchType: "friendly",
     notes: "",
@@ -64,6 +66,7 @@ function toForm(m: StadiumMatch): SessionForm {
     slotLabel: m.slotLabel,
     slotPrice: m.slotPrice,
     amountReceived: m.amountReceived ?? "",
+    udhariAmount: m.udhariAmount ?? "",
     receivedByOwnerId: m.receivedByOwnerId ?? "",
     matchType: m.matchType,
     notes: m.notes ?? "",
@@ -159,12 +162,16 @@ export default function AdminMatchesPage() {
       form.amountReceived === "" || form.amountReceived === undefined
         ? undefined
         : parseAmount(form.amountReceived);
+    const udhari =
+      form.udhariAmount === "" || form.udhariAmount === undefined
+        ? undefined
+        : parseAmount(form.udhariAmount);
     if (received !== undefined && (Number.isNaN(received) || received < 0)) {
       toast("Enter a valid amount received", "error");
       return;
     }
-    if (received !== undefined && received > form.slotPrice) {
-      toast("Amount received cannot exceed session price", "error");
+    if (udhari !== undefined && (Number.isNaN(udhari) || udhari < 0)) {
+      toast("Enter a valid udhari amount", "error");
       return;
     }
 
@@ -177,6 +184,7 @@ export default function AdminMatchesPage() {
       slotLabel: form.slotLabel,
       slotPrice: form.slotPrice,
       amountReceived: received,
+      udhariAmount: udhari,
       receivedByOwnerId: form.receivedByOwnerId || undefined,
       matchType: form.matchType,
       notes: form.notes.trim() || undefined,
@@ -302,8 +310,28 @@ export default function AdminMatchesPage() {
               <Label>Amount received (₹)</Label>
               <AmountInput
                 value={form.amountReceived}
-                onChange={(amountReceived) => setForm({ ...form, amountReceived })}
+                onChange={(amountReceived) => {
+                  setForm((f) => {
+                    const next = { ...f, amountReceived };
+                    if (f.udhariAmount === "") {
+                      next.udhariAmount =
+                        amountReceived === ""
+                          ? ""
+                          : String(Math.max(0, f.slotPrice - parseAmount(amountReceived)));
+                    }
+                    return next;
+                  });
+                }}
                 placeholder="Cash received"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Udhari / pending (₹) — enter manually</Label>
+              <AmountInput
+                value={form.udhariAmount}
+                onChange={(udhariAmount) => setForm({ ...form, udhariAmount })}
+                placeholder="e.g. 500 or 0 if discount"
                 className="mt-1"
               />
             </div>

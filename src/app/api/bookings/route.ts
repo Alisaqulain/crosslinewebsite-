@@ -49,11 +49,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const udhariRaw = body.udhariAmount;
+    let udhariAmount: number | undefined;
+    if (walkIn && udhariRaw !== undefined && udhariRaw !== "") {
+      udhariAmount = Number(udhariRaw);
+      if (Number.isNaN(udhariAmount) || udhariAmount < 0) {
+        return NextResponse.json({ error: "Invalid udhari amount" }, { status: 400 });
+      }
+    }
+
     const booking: Booking = {
       id: generateId("BK"),
       customerName: body.customerName?.trim(),
       email: (body.email?.trim() || (walkIn ? "walkin@crossline.local" : "")),
-      phone: body.phone?.trim(),
+      phone: body.phone?.trim() || "",
       address: body.address?.trim() || (walkIn ? "Walk-in" : ""),
       date: body.date,
       slotId: body.slotId,
@@ -67,6 +76,7 @@ export async function POST(req: NextRequest) {
       ballQuality: walkIn && ballsUsed > 0 ? ballQuality : undefined,
       ballsUsed: walkIn && ballsUsed > 0 ? ballsUsed : undefined,
       amountReceived: walkIn ? amountReceived : undefined,
+      udhariAmount: walkIn ? udhariAmount : undefined,
       receivedByOwnerId:
         walkIn && body.receivedByOwnerId
           ? String(body.receivedByOwnerId).trim() || undefined
@@ -74,14 +84,8 @@ export async function POST(req: NextRequest) {
     };
 
     if (walkIn) {
-      if (amountReceived !== undefined && amountReceived > slot.price) {
-        return NextResponse.json(
-          { error: "Amount received cannot exceed session price" },
-          { status: 400 }
-        );
-      }
-      if (!booking.customerName || !booking.phone || !booking.date) {
-        return NextResponse.json({ error: "Name, phone, and date are required" }, { status: 400 });
+      if (!booking.customerName || !booking.date) {
+        return NextResponse.json({ error: "Name and date are required" }, { status: 400 });
       }
       if (ballsUsed > 0 && !ballQuality) {
         return NextResponse.json({ error: "Select ball quality" }, { status: 400 });
@@ -93,7 +97,6 @@ export async function POST(req: NextRequest) {
     } else if (
       !booking.customerName ||
       !booking.email ||
-      !booking.phone ||
       !booking.address ||
       !booking.date
     ) {

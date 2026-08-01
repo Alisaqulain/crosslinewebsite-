@@ -50,11 +50,11 @@ export async function PATCH(
     if (Number.isNaN(received) || received < 0) {
       return NextResponse.json({ error: "Invalid amount received" }, { status: 400 });
     }
-    if (received > current.slotPrice) {
-      return NextResponse.json(
-        { error: `Amount cannot exceed session price (${current.slotPrice})` },
-        { status: 400 }
-      );
+    if (body.udhariAmount !== undefined && body.udhariAmount !== null && body.udhariAmount !== "") {
+      const udhari = Number(body.udhariAmount);
+      if (Number.isNaN(udhari) || udhari < 0) {
+        return NextResponse.json({ error: "Invalid udhari amount" }, { status: 400 });
+      }
     }
   }
 
@@ -148,9 +148,15 @@ export async function PATCH(
       delete booking.ballQuality;
       delete booking.ballsUsed;
       delete booking.amountReceived;
+      delete booking.udhariAmount;
     } else if (booking.status === "approved") {
       if (recordingPayment) {
         booking.amountReceived = Number(body.amountReceived) || 0;
+        if (body.udhariAmount !== undefined && body.udhariAmount !== null && body.udhariAmount !== "") {
+          booking.udhariAmount = Number(body.udhariAmount) || 0;
+        } else {
+          delete booking.udhariAmount;
+        }
         if (body.receivedByOwnerId !== undefined) {
           const oid = String(body.receivedByOwnerId).trim();
           if (oid) booking.receivedByOwnerId = oid;

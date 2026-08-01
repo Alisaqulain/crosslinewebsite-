@@ -4,9 +4,16 @@ export function matchAmountReceived(m: StadiumMatch): number {
   return typeof m.amountReceived === "number" ? m.amountReceived : 0;
 }
 
+export function suggestedMatchUdhari(m: StadiumMatch): number {
+  return Math.max(0, (m.slotPrice ?? 0) - matchAmountReceived(m));
+}
+
 export function matchUdhari(m: StadiumMatch): number {
   if (m.status === "cancelled") return 0;
-  return Math.max(0, (m.slotPrice ?? 0) - matchAmountReceived(m));
+  if (typeof m.udhariAmount === "number" && !Number.isNaN(m.udhariAmount)) {
+    return Math.max(0, m.udhariAmount);
+  }
+  return suggestedMatchUdhari(m);
 }
 
 export function completedMatches(store: AppStore): StadiumMatch[] {

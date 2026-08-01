@@ -141,7 +141,7 @@ export function BookingWizard() {
       const res = await createBooking({
         customerName: form.name,
         email: form.email,
-        phone: normalizePhone(form.phone),
+        phone: form.phone.trim() ? normalizePhone(form.phone) : "",
         address: form.address,
         date: selectedDate,
         slotId: selectedSlot,
@@ -259,7 +259,7 @@ export function BookingWizard() {
                 {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
               </div>
               <div>
-                <Label htmlFor="phone">Mobile Number *</Label>
+                <Label htmlFor="phone">Mobile Number (optional)</Label>
                 <Input
                   id="phone"
                   type="tel"

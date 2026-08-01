@@ -72,8 +72,10 @@ export interface Booking {
   ballsUsed?: number;
   /** Walk-in / phone booking (not from website) */
   walkIn?: boolean;
-  /** Cash/advance received (₹). Udhari = slotPrice − amountReceived */
+  /** Cash/advance received (₹) */
   amountReceived?: number;
+  /** Admin-set pending balance (₹). When set, used instead of slotPrice − received (discount/deals). */
+  udhariAmount?: number;
   /** Partner / owner who received this payment */
   receivedByOwnerId?: string;
 }
@@ -110,6 +112,8 @@ export interface StadiumMatch {
   slotLabel: string;
   slotPrice: number;
   amountReceived?: number;
+  /** Admin-set pending balance (₹) — for discounts/deals */
+  udhariAmount?: number;
   receivedByOwnerId?: string;
   matchType: MatchType;
   notes?: string;

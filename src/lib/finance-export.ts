@@ -1,8 +1,8 @@
 import type { AppStore, OtherIncome } from "./types";
 import { dieselAmount } from "./diesel";
 import { getOwnerName, resolveOwners } from "./owners";
-import { completedMatches, matchAmountReceived } from "./matches";
-import { bookingAmountReceived, getStoreUdhariSummary } from "./udhari";
+import { completedMatches, matchAmountReceived, matchUdhari } from "./matches";
+import { bookingAmountReceived, bookingUdhari, getStoreUdhariSummary } from "./udhari";
 import { getQualityLabel } from "./qualities";
 import { getBallStock } from "./finance";
 import { formatDate } from "./utils";
@@ -243,7 +243,7 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
       session: b.slotLabel,
       sessionPrice: b.slotPrice,
       received: bookingAmountReceived(b),
-      udhari: Math.max(0, b.slotPrice - bookingAmountReceived(b)),
+      udhari: bookingUdhari(b),
       owner: getOwnerName(store, b.receivedByOwnerId),
     });
   }
@@ -259,7 +259,7 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
       session: m.slotLabel,
       sessionPrice: m.slotPrice,
       received: matchAmountReceived(m),
-      udhari: Math.max(0, m.slotPrice - matchAmountReceived(m)),
+      udhari: matchUdhari(m),
       owner: getOwnerName(store, m.receivedByOwnerId),
     });
   }

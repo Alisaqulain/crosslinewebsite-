@@ -7,9 +7,9 @@ export function validateEmail(email: string): string | null {
   return null;
 }
 
-export function validatePhone(phone: string): string | null {
+export function validatePhone(phone: string, required = false): string | null {
   const digits = phone.replace(/\D/g, "").slice(-10);
-  if (!digits) return "Mobile number is required";
+  if (!digits) return required ? "Mobile number is required" : null;
   if (!PHONE_RE.test(digits)) return "Enter a valid 10-digit Indian mobile number";
   return null;
 }
@@ -21,5 +21,6 @@ export function validateRequired(value: string, label: string): string | null {
 
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "").slice(-10);
+  if (!digits) return "";
   return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 }
