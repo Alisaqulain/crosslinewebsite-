@@ -56,6 +56,10 @@ export async function PATCH(
         return NextResponse.json({ error: "Invalid udhari amount" }, { status: 400 });
       }
     }
+    const ownerId = body.receivedByOwnerId ? String(body.receivedByOwnerId).trim() : "";
+    if (!ownerId) {
+      return NextResponse.json({ error: "Owner is required for payment" }, { status: 400 });
+    }
   }
 
   if (approving) {

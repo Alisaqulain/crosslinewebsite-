@@ -175,6 +175,11 @@ export default function AdminMatchesPage() {
       return;
     }
 
+    if (!form.receivedByOwnerId) {
+      toast("Select owner — required", "error");
+      return;
+    }
+
     const row: StadiumMatch = {
       id: editingId ?? `M-${Date.now()}`,
       customerName: form.customerName.trim(),
@@ -354,7 +359,8 @@ export default function AdminMatchesPage() {
                 owners={store.owners ?? []}
                 value={form.receivedByOwnerId}
                 onChange={(receivedByOwnerId) => setForm({ ...form, receivedByOwnerId })}
-                label="Money received by"
+                label="Owner / who received *"
+                required
               />
             )}
             <div className="sm:col-span-2 lg:col-span-3">

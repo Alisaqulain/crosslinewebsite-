@@ -102,12 +102,12 @@ export default function AdminUdhariPage() {
       toast("Enter a valid udhari amount", "error");
       return;
     }
-    if (received > 0 && !(paymentOwnerId || store.owners?.[0]?.id)) {
-      toast("Select who received the money", "error");
+    if (!paymentOwnerId) {
+      toast("Select owner — required", "error");
       return;
     }
 
-    const ownerId = paymentOwnerId || store.owners?.[0]?.id || null;
+    const ownerId = paymentOwnerId;
     setActionId(payTarget.data.id);
 
     try {
@@ -319,8 +319,8 @@ export default function AdminUdhariPage() {
               owners={owners}
               value={paymentOwnerId}
               onChange={setPaymentOwnerId}
-              label="Received by (owner)"
-              required={parseAmount(amountInput) > 0}
+              label="Owner / who received *"
+              required
             />
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" onClick={() => setPayTarget(null)}>

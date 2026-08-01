@@ -77,16 +77,18 @@ export async function POST(req: NextRequest) {
       ballsUsed: walkIn && ballsUsed > 0 ? ballsUsed : undefined,
       amountReceived: walkIn ? amountReceived : undefined,
       udhariAmount: walkIn ? udhariAmount : undefined,
-      receivedByOwnerId:
-        walkIn && body.receivedByOwnerId
-          ? String(body.receivedByOwnerId).trim() || undefined
-          : undefined,
+      receivedByOwnerId: walkIn ? String(body.receivedByOwnerId).trim() : undefined,
     };
 
     if (walkIn) {
       if (!booking.customerName || !booking.date) {
         return NextResponse.json({ error: "Name and date are required" }, { status: 400 });
       }
+      const walkInOwner = body.receivedByOwnerId ? String(body.receivedByOwnerId).trim() : "";
+      if (!walkInOwner) {
+        return NextResponse.json({ error: "Owner is required for walk-in booking" }, { status: 400 });
+      }
+      booking.receivedByOwnerId = walkInOwner;
       if (ballsUsed > 0 && !ballQuality) {
         return NextResponse.json({ error: "Select ball quality" }, { status: 400 });
       }

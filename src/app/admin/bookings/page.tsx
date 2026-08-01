@@ -165,8 +165,8 @@ export default function AdminBookingsPage() {
       toast("Enter a valid udhari amount", "error");
       return;
     }
-    if (received > 0 && !paymentOwnerId) {
-      toast("Select who received the money", "error");
+    if (!paymentOwnerId) {
+      toast("Select owner — who received / recorded this booking", "error");
       return;
     }
     setActionId(payTarget.id);
@@ -261,8 +261,12 @@ export default function AdminBookingsPage() {
   };
 
   const submitWalkIn = async () => {
-    if (!walkIn.phone || !walkIn.slotId) {
-      toast("Fill phone and session", "error");
+    if (!walkIn.slotId) {
+      toast("Select a session", "error");
+      return;
+    }
+    if (!walkIn.receivedByOwnerId) {
+      toast("Select owner — required for every booking", "error");
       return;
     }
     if (!selectedWalkInSlot?.bookable) {
@@ -432,7 +436,8 @@ export default function AdminBookingsPage() {
                 owners={store.owners ?? []}
                 value={walkIn.receivedByOwnerId}
                 onChange={(receivedByOwnerId) => setWalkIn({ ...walkIn, receivedByOwnerId })}
-                label="Money received by"
+                label="Owner / who received *"
+                required
               />
             )}
             <div className="sm:col-span-2 space-y-2 p-3 rounded-xl admin-subtle border border-[var(--border)]">
@@ -596,8 +601,8 @@ export default function AdminBookingsPage() {
                 owners={store.owners ?? []}
                 value={paymentOwnerId}
                 onChange={setPaymentOwnerId}
-                label="Money received by"
-                required={parseAmount(amountReceivedInput) > 0}
+                label="Owner / who received *"
+                required
               />
             )}
             <div className="flex gap-2 justify-end">
