@@ -13,7 +13,7 @@ export function matchUdhari(m: StadiumMatch): number {
   if (typeof m.udhariAmount === "number" && !Number.isNaN(m.udhariAmount)) {
     return Math.max(0, m.udhariAmount);
   }
-  return suggestedMatchUdhari(m);
+  return 0;
 }
 
 export function completedMatches(store: AppStore): StadiumMatch[] {

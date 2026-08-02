@@ -5,18 +5,18 @@ export function bookingAmountReceived(b: Booking): number {
   return typeof b.amountReceived === "number" ? b.amountReceived : 0;
 }
 
-/** Auto udhari from list price minus received (before discount override) */
+/** @deprecated Legacy hint only — udhari is never auto-applied */
 export function suggestedBookingUdhari(b: Booking): number {
   return Math.max(0, b.slotPrice - bookingAmountReceived(b));
 }
 
-/** Pending balance — uses manual udhariAmount when admin set it */
+/** Pending balance — only what admin entered. Blank = ₹0 (no auto calc). */
 export function bookingUdhari(b: Booking): number {
   if (b.status !== "approved") return 0;
   if (typeof b.udhariAmount === "number" && !Number.isNaN(b.udhariAmount)) {
     return Math.max(0, b.udhariAmount);
   }
-  return suggestedBookingUdhari(b);
+  return 0;
 }
 
 export type UdhariSource = "walk-in" | "online" | "old-session";

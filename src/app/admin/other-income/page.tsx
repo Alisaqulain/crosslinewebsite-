@@ -21,9 +21,14 @@ import { Loader2, Package, Save, TrendingUp } from "lucide-react";
 
 const OTHER_CATEGORIES = [
   "Sponsorship",
+  "Drinks / snacks",
+  "Food / canteen",
   "Equipment rent",
+  "Parking",
   "Academy fees",
   "Tournament fees",
+  "Coaching",
+  "Net rent",
   "Misc income",
   "Other",
 ];
@@ -380,7 +385,7 @@ export default function AdminOtherIncomePage() {
             {editingOtherId ? "Edit other income" : "Other income"}
           </h3>
           <p className="text-xs text-slate-500 mb-4">
-            Sponsorship, rent, fees — not ball sales or bookings.
+            Any income source — sponsorship, drinks, rent, fees, etc. (Ball sales use the section above.)
           </p>
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -395,17 +400,18 @@ export default function AdminOtherIncomePage() {
             </div>
             <div>
               <Label>Category</Label>
-              <Select
+              <Input
+                list="other-income-categories"
                 value={otherForm.category}
                 onChange={(e) => setOtherForm({ ...otherForm, category: e.target.value })}
+                placeholder="Pick or type any source"
                 className="mt-1"
-              >
+              />
+              <datalist id="other-income-categories">
                 {OTHER_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                  <option key={c} value={c} />
                 ))}
-              </Select>
+              </datalist>
             </div>
             <div className="sm:col-span-2">
               <Label>Description</Label>

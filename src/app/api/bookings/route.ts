@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     const udhariRaw = body.udhariAmount;
-    let udhariAmount: number | undefined;
+    let udhariAmount = 0;
     if (walkIn && udhariRaw !== undefined && udhariRaw !== "") {
       udhariAmount = Number(udhariRaw);
       if (Number.isNaN(udhariAmount) || udhariAmount < 0) {

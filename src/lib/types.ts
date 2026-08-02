@@ -74,7 +74,7 @@ export interface Booking {
   walkIn?: boolean;
   /** Cash/advance received (₹) */
   amountReceived?: number;
-  /** Admin-set pending balance (₹). When set, used instead of slotPrice − received (discount/deals). */
+  /** Admin-set pending balance (₹). Empty = 0 — never auto-calculated from price − received */
   udhariAmount?: number;
   /** Partner / owner who received this payment */
   receivedByOwnerId?: string;

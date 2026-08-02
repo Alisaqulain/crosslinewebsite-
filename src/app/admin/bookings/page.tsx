@@ -24,7 +24,7 @@ import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate, formatTimeRange } from "@/lib/utils";
 import { getBookingSlotsForDate } from "@/lib/slots";
 import { getQualityLabel } from "@/lib/qualities";
-import { bookingAmountReceived, bookingUdhari, suggestedBookingUdhari } from "@/lib/udhari";
+import { bookingAmountReceived, bookingUdhari } from "@/lib/udhari";
 import type { AppStore, BallQuality, Booking, BookingSlotView, BookingStatus } from "@/lib/types";
 import { Check, X, Loader2, Plus, IndianRupee, Save, Trash2 } from "lucide-react";
 
@@ -47,7 +47,7 @@ export default function AdminBookingsPage() {
   const [ballTarget, setBallTarget] = useState<Booking | null>(null);
   const [payTarget, setPayTarget] = useState<Booking | null>(null);
   const [amountReceivedInput, setAmountReceivedInput] = useState("");
-  const [udhariInput, setUdhariInput] = useState("");
+  const [udhariInput, setUdhariInput] = useState("0");
   const [paymentOwnerId, setPaymentOwnerId] = useState("");
   const [ballQuality, setBallQuality] = useState<BallQuality>("");
   const [ballsUsed, setBallsUsed] = useState(0);
@@ -63,7 +63,7 @@ export default function AdminBookingsPage() {
     ballQuality: "" as BallQuality,
     ballsUsed: 0,
     amountReceived: "" as string | number,
-    udhariAmount: "" as string | number,
+    udhariAmount: "0" as string | number,
     receivedByOwnerId: "",
   });
 
@@ -139,18 +139,9 @@ export default function AdminBookingsPage() {
     const received = bookingAmountReceived(b);
     setAmountReceivedInput(String(received || ""));
     setUdhariInput(
-      typeof b.udhariAmount === "number"
-        ? String(b.udhariAmount)
-        : String(suggestedBookingUdhari({ ...b, amountReceived: received }))
+      typeof b.udhariAmount === "number" ? String(b.udhariAmount) : "0"
     );
     setPaymentOwnerId(b.receivedByOwnerId ?? "");
-  };
-
-  const updateUdhariFromReceived = (receivedStr: string, booking: Booking) => {
-    const received = parseAmount(receivedStr);
-    if (typeof booking.udhariAmount !== "number") {
-      setUdhariInput(String(Math.max(0, booking.slotPrice - received)));
-    }
   };
 
   const confirmPayment = async () => {
@@ -290,10 +281,7 @@ export default function AdminBookingsPage() {
           walkIn.amountReceived !== "" && walkIn.amountReceived !== undefined
             ? parseAmount(walkIn.amountReceived)
             : undefined,
-        udhariAmount:
-          walkIn.udhariAmount !== "" && walkIn.udhariAmount !== undefined
-            ? parseAmount(walkIn.udhariAmount)
-            : undefined,
+        udhariAmount: parseAmount(walkIn.udhariAmount),
         receivedByOwnerId: walkIn.receivedByOwnerId || undefined,
       });
       toast("Direct booking saved — stock updated", "success");
@@ -306,7 +294,7 @@ export default function AdminBookingsPage() {
         ballQuality: "",
         ballsUsed: 0,
         amountReceived: "",
-        udhariAmount: "",
+        udhariAmount: "0",
         receivedByOwnerId: "",
       });
       setWalkInAssignBalls(false);
@@ -398,18 +386,7 @@ export default function AdminBookingsPage() {
               <Label>Amount received (₹)</Label>
               <AmountInput
                 value={walkIn.amountReceived}
-                onChange={(amountReceived) => {
-                  setWalkIn((w) => {
-                    const next = { ...w, amountReceived };
-                    if (selectedWalkInSlot && w.udhariAmount === "") {
-                      next.udhariAmount =
-                        amountReceived === ""
-                          ? ""
-                          : String(Math.max(0, selectedWalkInSlot.price - parseAmount(amountReceived)));
-                    }
-                    return next;
-                  });
-                }}
+                onChange={(amountReceived) => setWalkIn({ ...walkIn, amountReceived })}
                 placeholder="e.g. 2500"
                 className="mt-1"
               />
@@ -420,15 +397,15 @@ export default function AdminBookingsPage() {
               )}
             </div>
             <div>
-              <Label>Udhari / pending (₹) — enter manually</Label>
+              <Label>Udhari / pending (₹)</Label>
               <AmountInput
                 value={walkIn.udhariAmount}
                 onChange={(udhariAmount) => setWalkIn({ ...walkIn, udhariAmount })}
-                placeholder="e.g. 500 or 0 if discount"
+                placeholder="0 if none — enter manually"
                 className="mt-1"
               />
               <p className="text-xs text-slate-500 mt-1">
-                Change if discount/deal — not always price minus received
+                Not auto-calculated. Leave 0 if full payment or discount — only type udhari if customer still owes.
               </p>
             </div>
             {store && (
@@ -578,22 +555,20 @@ export default function AdminBookingsPage() {
               <Label>Received (₹)</Label>
               <AmountInput
                 value={amountReceivedInput}
-                onChange={(v) => {
-                  setAmountReceivedInput(v);
-                  updateUdhariFromReceived(v, payTarget);
-                }}
+                onChange={setAmountReceivedInput}
                 className="mt-1"
               />
             </div>
             <div>
-              <Label>Udhari / pending (₹) — enter manually</Label>
+              <Label>Udhari / pending (₹)</Label>
               <AmountInput
                 value={udhariInput}
                 onChange={setUdhariInput}
+                placeholder="0 if none"
                 className="mt-1"
               />
               <p className="text-xs mt-1 text-slate-500">
-                For discount or deal, set udhari yourself (e.g. list ₹3,000, received ₹2,500, udhari ₹0)
+                Type manually only. Not price − received. Empty = ₹0 udhari.
               </p>
             </div>
             {store && (

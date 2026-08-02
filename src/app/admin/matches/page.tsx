@@ -50,7 +50,7 @@ function emptyForm(slots: AppStore["slots"]): SessionForm {
     slotLabel: slot?.label ?? "",
     slotPrice: slot?.price ?? 0,
     amountReceived: "",
-    udhariAmount: "",
+    udhariAmount: "0",
     receivedByOwnerId: "",
     matchType: "friendly",
     notes: "",
@@ -66,7 +66,7 @@ function toForm(m: StadiumMatch): SessionForm {
     slotLabel: m.slotLabel,
     slotPrice: m.slotPrice,
     amountReceived: m.amountReceived ?? "",
-    udhariAmount: m.udhariAmount ?? "",
+    udhariAmount: typeof m.udhariAmount === "number" ? m.udhariAmount : "0",
     receivedByOwnerId: m.receivedByOwnerId ?? "",
     matchType: m.matchType,
     notes: m.notes ?? "",
@@ -164,7 +164,7 @@ export default function AdminMatchesPage() {
         : parseAmount(form.amountReceived);
     const udhari =
       form.udhariAmount === "" || form.udhariAmount === undefined
-        ? undefined
+        ? 0
         : parseAmount(form.udhariAmount);
     if (received !== undefined && (Number.isNaN(received) || received < 0)) {
       toast("Enter a valid amount received", "error");
@@ -315,28 +315,17 @@ export default function AdminMatchesPage() {
               <Label>Amount received (₹)</Label>
               <AmountInput
                 value={form.amountReceived}
-                onChange={(amountReceived) => {
-                  setForm((f) => {
-                    const next = { ...f, amountReceived };
-                    if (f.udhariAmount === "") {
-                      next.udhariAmount =
-                        amountReceived === ""
-                          ? ""
-                          : String(Math.max(0, f.slotPrice - parseAmount(amountReceived)));
-                    }
-                    return next;
-                  });
-                }}
+                onChange={(amountReceived) => setForm({ ...form, amountReceived })}
                 placeholder="Cash received"
                 className="mt-1"
               />
             </div>
             <div>
-              <Label>Udhari / pending (₹) — enter manually</Label>
+              <Label>Udhari / pending (₹)</Label>
               <AmountInput
                 value={form.udhariAmount}
                 onChange={(udhariAmount) => setForm({ ...form, udhariAmount })}
-                placeholder="e.g. 500 or 0 if discount"
+                placeholder="0 if none — manual"
                 className="mt-1"
               />
             </div>

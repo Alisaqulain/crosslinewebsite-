@@ -10,8 +10,8 @@ import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin, patchBooking } from "@/lib/api-client";
 import { getOwnerName } from "@/lib/owners";
-import { matchAmountReceived, matchUdhari, normalizeMatch, suggestedMatchUdhari } from "@/lib/matches";
-import { bookingAmountReceived, getStoreUdhariSummary, suggestedBookingUdhari, type UdhariAccount } from "@/lib/udhari";
+import { bookingAmountReceived, getStoreUdhariSummary, type UdhariAccount } from "@/lib/udhari";
+import { matchAmountReceived, matchUdhari, normalizeMatch } from "@/lib/matches";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore, Booking, StadiumMatch, StadiumOwner } from "@/lib/types";
@@ -65,18 +65,14 @@ export default function AdminUdhariPage() {
       setPayTarget({ kind: "booking", data: b });
       const received = bookingAmountReceived(b);
       setAmountInput(String(received || ""));
-      setUdhariInput(
-        typeof b.udhariAmount === "number" ? String(b.udhariAmount) : String(suggestedBookingUdhari(b))
-      );
+      setUdhariInput(typeof b.udhariAmount === "number" ? String(b.udhariAmount) : "0");
       setPaymentOwnerId(b.receivedByOwnerId ?? "");
     } else if (account.kind === "old-session" && account.oldSession) {
       const m = account.oldSession;
       setPayTarget({ kind: "old-session", data: m });
       const received = matchAmountReceived(m);
       setAmountInput(String(received || ""));
-      setUdhariInput(
-        typeof m.udhariAmount === "number" ? String(m.udhariAmount) : String(suggestedMatchUdhari(m))
-      );
+      setUdhariInput(typeof m.udhariAmount === "number" ? String(m.udhariAmount) : "0");
       setPaymentOwnerId(m.receivedByOwnerId ?? "");
     }
   };
@@ -301,19 +297,14 @@ export default function AdminUdhariPage() {
               <Label>Amount received (₹)</Label>
               <AmountInput
                 value={amountInput}
-                onChange={(v) => {
-                  setAmountInput(v);
-                  if (payTarget && typeof payTarget.data.udhariAmount !== "number") {
-                    setUdhariInput(String(Math.max(0, paySessionPrice - parseAmount(v))));
-                  }
-                }}
+                onChange={setAmountInput}
                 className="mt-1"
               />
             </div>
             <div>
-              <Label>Udhari / pending (₹) — enter manually</Label>
-              <AmountInput value={udhariInput} onChange={setUdhariInput} className="mt-1" />
-              <p className="text-xs text-slate-500 mt-1">Change for discount/deal — not always price minus received</p>
+              <Label>Udhari / pending (₹)</Label>
+              <AmountInput value={udhariInput} onChange={setUdhariInput} placeholder="0 if none" className="mt-1" />
+              <p className="text-xs text-slate-500 mt-1">Manual only — not auto price minus received</p>
             </div>
             <OwnerSelect
               owners={owners}

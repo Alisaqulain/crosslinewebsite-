@@ -156,11 +156,10 @@ export async function PATCH(
     } else if (booking.status === "approved") {
       if (recordingPayment) {
         booking.amountReceived = Number(body.amountReceived) || 0;
-        if (body.udhariAmount !== undefined && body.udhariAmount !== null && body.udhariAmount !== "") {
-          booking.udhariAmount = Number(body.udhariAmount) || 0;
-        } else {
-          delete booking.udhariAmount;
-        }
+        booking.udhariAmount =
+          body.udhariAmount !== undefined && body.udhariAmount !== null && body.udhariAmount !== ""
+            ? Number(body.udhariAmount) || 0
+            : 0;
         if (body.receivedByOwnerId !== undefined) {
           const oid = String(body.receivedByOwnerId).trim();
           if (oid) booking.receivedByOwnerId = oid;
