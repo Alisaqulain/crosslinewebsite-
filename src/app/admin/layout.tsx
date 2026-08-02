@@ -1,20 +1,15 @@
-"use client";
-
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import type { Metadata } from "next";
+import { AdminAuthGuard } from "@/components/admin/AdminAuthGuard";
+import { pageMetadata } from "@/lib/seo";
 import "./admin.css";
 
+export const metadata: Metadata = pageMetadata({
+  title: "Admin",
+  description: "Crossline Cricket Stadium admin panel.",
+  path: "/admin",
+  noIndex: true,
+});
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const isLogin = pathname === "/admin/login";
-
-  useEffect(() => {
-    if (isLogin) return;
-    const authed = sessionStorage.getItem("crossline_admin");
-    if (!authed) router.replace("/admin/login");
-  }, [isLogin, router]);
-
-  if (isLogin) return <>{children}</>;
-  return <>{children}</>;
+  return <AdminAuthGuard>{children}</AdminAuthGuard>;
 }

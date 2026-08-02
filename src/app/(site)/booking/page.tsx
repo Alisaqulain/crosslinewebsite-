@@ -2,11 +2,14 @@ import { BookingSection } from "@/components/home/BookingSection";
 import { PageHero } from "@/components/media/PageHero";
 import { images } from "@/lib/media";
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Ground Booking",
-  description: "Book your cricket ground slot at Crossline Cricket Stadium. Select date, session, and submit your team booking request.",
-};
+  description:
+    "Book your cricket ground slot online at Crossline Cricket Stadium, Muzaffarnagar. Choose date, morning or night session, and submit your team booking request.",
+  path: "/booking",
+});
 
 export default function BookingPage() {
   return (

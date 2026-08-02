@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Sora } from "next/font/google";
 import { ToastProvider } from "@/components/ui/Toast";
+import { pageMetadata, siteConfig } from "@/lib/seo";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -16,16 +17,27 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
+  ...pageMetadata(),
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: "Crossline Cricket Stadium & Sports Academy",
-    template: "%s | Crossline Cricket Stadium",
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.shortName}`,
   },
-  description:
-    "Book your cricket slot online at crosslinecricketstadium.in — premium ground booking, sports academy, and tournaments at Crossline Cricket Stadium, Muzaffarnagar.",
-  metadataBase: new URL("https://crosslinecricketstadium.in"),
+  applicationName: siteConfig.shortName,
+  authors: [{ name: siteConfig.name, url: siteConfig.url }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  category: "Sports",
   icons: {
-    icon: "/crossline-logo.png",
-    apple: "/crossline-logo.png",
+    icon: [
+      { url: siteConfig.logo, sizes: "32x32", type: "image/png" },
+      { url: siteConfig.logo, sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: siteConfig.logo, sizes: "180x180", type: "image/png" }],
+    shortcut: siteConfig.logo,
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
 };
 

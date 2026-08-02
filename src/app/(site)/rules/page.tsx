@@ -4,10 +4,14 @@ import { PageHero } from "@/components/media/PageHero";
 import { MediaImage } from "@/components/media/MediaImage";
 import { Shield, Clock, Users, Ban, AlertTriangle, CheckCircle } from "lucide-react";
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Rules & Policies",
-};
+  description:
+    "Ground rules and booking policies at Crossline Cricket Stadium — slot timings, conduct, safety, and tournament guidelines for players and teams.",
+  path: "/rules",
+});
 
 const policies = [
   {
