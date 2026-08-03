@@ -37,8 +37,9 @@ export async function PATCH(
       (body.ballsUsed !== undefined || body.ballQuality !== undefined));
 
   const recordingPayment = body.recordPayment === true || body.amountReceived !== undefined;
+  const clearingUdhari = body.clearUdhari === true;
 
-  if (recordingPayment) {
+  if (recordingPayment && !clearingUdhari) {
     const status = (body.status ?? current.status) as BookingStatus;
     if (status !== "approved" && body.status !== "approved") {
       return NextResponse.json(
@@ -154,7 +155,9 @@ export async function PATCH(
       delete booking.amountReceived;
       delete booking.udhariAmount;
     } else if (booking.status === "approved") {
-      if (recordingPayment) {
+      if (clearingUdhari) {
+        booking.udhariAmount = 0;
+      } else if (recordingPayment) {
         booking.amountReceived = Number(body.amountReceived) || 0;
         booking.udhariAmount =
           body.udhariAmount !== undefined && body.udhariAmount !== null && body.udhariAmount !== ""

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { StatCard } from "@/components/admin/StatCard";
 import { Card } from "@/components/ui/Card";
@@ -8,20 +9,19 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { fetchAdminStore } from "@/lib/api-client";
 import { getFinanceSummary } from "@/lib/finance";
-import { bookingUdhari, getStoreUdhariSummary } from "@/lib/udhari";
-import { getEndedSessionsNeedingPayment } from "@/lib/sessions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore } from "@/lib/types";
 import {
-  AlertTriangle,
   Calendar,
-  Users,
-  Package,
   IndianRupee,
   Loader2,
   ArrowRight,
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Package,
 } from "lucide-react";
-import Link from "next/link";
 
 export default function AdminDashboardPage() {
   const [store, setStore] = useState<AppStore | null>(null);
@@ -30,9 +30,9 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchAdminStore()
-      .then(({ store: s, finance: f }) => {
+      .then(({ store: s }) => {
         setStore(s);
-        setFinance(f ?? getFinanceSummary(s));
+        setFinance(getFinanceSummary(s));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -50,76 +50,55 @@ export default function AdminDashboardPage() {
   const today = new Date().toISOString().split("T")[0];
   const pending = store.bookings.filter((b) => b.status === "pending").length;
   const approved = store.bookings.filter((b) => b.status === "approved").length;
-  const todayBookings = store.bookings.filter((b) => b.date === today).length;
+  const todayBookings = store.bookings.filter((b) => b.date === today && b.status === "approved").length;
   const recent = [...store.bookings]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
-  const udhari = getStoreUdhariSummary(store);
-  const endedNeedingPayment = getEndedSessionsNeedingPayment(store);
-  const todayEnded = endedNeedingPayment.filter((s) => s.date === today);
-
-  const quickLinks = [
-    { href: "/admin/bookings", label: "Approve pending bookings" },
-    { href: "/admin/udhari", label: "Udhari — who owes how much" },
-    { href: "/admin/detailed-finance", label: "Detailed finance breakdown" },
-    { href: "/admin/finance", label: "Profit & loss + PDF/Excel" },
-    { href: "/admin/inventory", label: "Ball stock & purchases" },
-    { href: "/admin/diesel", label: "Diesel expenses" },
-  ];
+  const udhari = finance.udhari;
+  const ownerStats = finance.ownerStats.filter((o) => o.incomeTotal > 0 || o.expenseTotal > 0);
+  const manualIncomeAll = store.financeEntries
+    .filter((e) => e.type === "income")
+    .reduce((s, e) => s + e.amount, 0);
 
   return (
     <AdminShell title="Dashboard">
-      {endedNeedingPayment.length > 0 && (
-        <Card className="mb-6 !p-5 border-2 border-amber-400/60 bg-amber-50/80">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-amber-900 font-[family-name:var(--font-sora)]">
-                Match ended — clear amount
-              </h2>
-              <p className="text-sm text-amber-800/90 mt-1">
-                {todayEnded.length > 0
-                  ? `${todayEnded.length} session(s) ended today. Collect pending payment below.`
-                  : `${endedNeedingPayment.length} past session(s) still have pending payment.`}
-              </p>
-              <div className="mt-4 space-y-2">
-                {endedNeedingPayment.slice(0, 8).map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-white/80 border border-amber-200/80"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--navy)]">{s.customerName}</p>
-                      <p className="text-xs text-slate-500">
-                        {formatDate(s.date)} · {s.slotLabel}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500">
-                        Total {formatCurrency(s.slotPrice)} · Received {formatCurrency(s.received)}
-                      </p>
-                      <p className="text-sm font-bold text-amber-800">
-                        Clear {formatCurrency(s.udhari)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link href="/admin/bookings" className="inline-block mt-4">
-                <Button size="sm">Record payment in Bookings</Button>
-              </Link>
-            </div>
-          </div>
+      {pending > 0 && (
+        <Card className="mb-6 !p-4 border-amber-300/60 bg-amber-50/80 flex flex-wrap items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+          <p className="flex-1 text-sm text-amber-900">
+            {pending} booking(s) waiting for approval
+          </p>
+          <Link href="/admin/bookings">
+            <Button size="sm">Review bookings</Button>
+          </Link>
         </Card>
       )}
 
+      {/* Overall money */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Overall</h2>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-        <StatCard label="Pending Bookings" value={pending} icon={Calendar} color="#e31837" trend={pending > 0 ? "Needs review" : undefined} />
-        <StatCard label="Approved Bookings" value={approved} icon={Users} color="#1f8a3c" />
-        <StatCard label="Today's Matches" value={todayBookings} icon={Calendar} color="#1e3d73" />
         <StatCard
-          label="Total Udhari Pending"
+          label="Total income"
+          value={formatCurrency(finance.totalIncome)}
+          icon={TrendingUp}
+          color="#1f8a3c"
+        />
+        <StatCard
+          label="Total expenses"
+          value={formatCurrency(finance.totalExpense)}
+          icon={TrendingDown}
+          color="#e31837"
+        />
+        <StatCard
+          label="Net profit"
+          value={formatCurrency(finance.netProfit)}
+          icon={IndianRupee}
+          color={finance.netProfit >= 0 ? "#1f8a3c" : "#e31837"}
+          trend={finance.netProfit >= 0 ? "In profit" : "In loss"}
+        />
+        <StatCard
+          label="Total udhari pending"
           value={formatCurrency(udhari.totalUdhari)}
           icon={IndianRupee}
           color="#e31837"
@@ -127,93 +106,226 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card className="!p-4 border-l-4 border-l-green-500">
-          <p className="text-xs text-slate-500">Cash income (all time)</p>
-          <p className="text-lg font-bold text-green-600 mt-1">{formatCurrency(finance.totalIncome)}</p>
+      {/* This month + bookings */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">This month</h2>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+        <StatCard
+          label="Month income"
+          value={formatCurrency(finance.thisMonth.income.total)}
+          icon={TrendingUp}
+          color="#1f8a3c"
+        />
+        <StatCard
+          label="Month expenses"
+          value={formatCurrency(finance.thisMonth.expense.total)}
+          icon={TrendingDown}
+          color="#e31837"
+        />
+        <StatCard
+          label="Month net"
+          value={formatCurrency(finance.thisMonth.netProfit)}
+          icon={IndianRupee}
+          color={finance.thisMonth.netProfit >= 0 ? "#1e3d73" : "#e31837"}
+        />
+        <StatCard
+          label="Today's matches"
+          value={todayBookings}
+          icon={Calendar}
+          color="#1e3d73"
+          trend={`${pending} pending · ${approved} approved`}
+        />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {/* Income breakdown */}
+        <Card>
+          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] mb-4">
+            Income breakdown (all time)
+          </h2>
+          <div className="space-y-2">
+            {[
+              { label: "Online bookings (received)", amount: finance.allTimeOnlineIncome },
+              { label: "Walk-in bookings (received)", amount: finance.allTimeWalkInIncome },
+              { label: "Old sessions (received)", amount: finance.oldSessionIncomeTotal },
+              { label: "Other income", amount: finance.otherIncomeTotal },
+              { label: "Manual income entries", amount: manualIncomeAll },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between p-3 rounded-xl admin-subtle text-sm"
+              >
+                <span className="text-slate-600">{row.label}</span>
+                <span className="font-semibold text-green-700">{formatCurrency(row.amount)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-green-50 border border-green-200 text-sm font-bold">
+              <span className="text-green-900">Cash received total</span>
+              <span className="text-green-700">{formatCurrency(finance.totalIncome)}</span>
+            </div>
+          </div>
+          <Link href="/admin/finance" className="inline-block mt-4">
+            <Button variant="ghost" size="sm">
+              Full P&L <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
         </Card>
-        <Card className="!p-4 border-l-4 border-l-red-500">
-          <p className="text-xs text-slate-500">Total expenses</p>
-          <p className="text-lg font-bold text-red-600 mt-1">{formatCurrency(finance.totalExpense)}</p>
-        </Card>
-        <Card className="!p-4 border-l-4 border-l-emerald-500">
-          <p className="text-xs text-slate-500">Net profit</p>
-          <p className={`text-lg font-bold mt-1 ${finance.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-            {formatCurrency(finance.netProfit)}
-          </p>
-        </Card>
-        <Card className="!p-4 border-l-4 border-l-amber-500">
-          <p className="text-xs text-slate-500">This month net</p>
-          <p
-            className={`text-lg font-bold mt-1 ${finance.thisMonth.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}
-          >
-            {formatCurrency(finance.thisMonth.netProfit)}
+
+        {/* Expense breakdown */}
+        <Card>
+          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] mb-4">
+            Expenses breakdown (all time)
+          </h2>
+          <div className="space-y-2">
+            {[
+              { label: "Diesel", amount: finance.dieselTotal },
+              { label: "Ball purchases", amount: finance.ballPurchaseTotal },
+              { label: "Other expenses", amount: finance.otherExpenseTotal },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between p-3 rounded-xl admin-subtle text-sm"
+              >
+                <span className="text-slate-600">{row.label}</span>
+                <span className="font-semibold text-red-600">{formatCurrency(row.amount)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-red-50 border border-red-200 text-sm font-bold">
+              <span className="text-red-900">Total expenses</span>
+              <span className="text-red-600">{formatCurrency(finance.totalExpense)}</span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-4 flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5" />
+            Ball stock left: <strong>{finance.totalBallsRemaining}</strong> balls
           </p>
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {/* Udhari — who owes how much */}
         <Card>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)]">Recent Bookings</h2>
-            <Link href="/admin/bookings">
-              <Button variant="ghost" size="sm" className="btn-ghost-admin text-[var(--text-muted)]">
-                View all
-              </Button>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)]">
+              Udhari — who owes how much
+            </h2>
+            <Link href="/admin/udhari">
+              <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
-          <div className="space-y-2">
-            {recent.length === 0 ? (
-              <p className="text-sm text-[var(--text-muted)] py-4 text-center">No bookings yet</p>
-            ) : (
-              recent.map((b) => (
+          {udhari.accounts.length === 0 ? (
+            <p className="text-sm text-slate-500 py-6 text-center">No pending udhari — all paid</p>
+          ) : (
+            <div className="space-y-2">
+              {udhari.accounts.slice(0, 8).map((a) => (
                 <div
-                  key={b.id}
-                  className="flex items-center justify-between p-3.5 rounded-xl admin-subtle hover:shadow-sm transition-shadow"
+                  key={a.id}
+                  className="flex items-center justify-between p-3 rounded-xl admin-subtle"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--navy)]">{b.customerName}</p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      {formatDate(b.date)} · {b.slotLabel}
-                      {b.walkIn ? " · Walk-in" : " · Online"}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--navy)] truncate">{a.customerName}</p>
+                    <p className="text-xs text-slate-500">
+                      {formatDate(a.date)} · {a.slotLabel}
+                      {a.source === "walk-in"
+                        ? " · Walk-in"
+                        : a.source === "old-session"
+                          ? " · Old session"
+                          : " · Online"}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Received {formatCurrency(a.received)} of {formatCurrency(a.sessionPrice)}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <Badge status={b.status} theme="light" />
-                    <p className="text-xs font-semibold text-[var(--brand-red)] mt-1">{formatCurrency(b.slotPrice)}</p>
-                    {b.status === "approved" && bookingUdhari(b) > 0 && (
-                      <p className="text-[10px] text-amber-700 font-semibold">
-                        Udhari {formatCurrency(bookingUdhari(b))}
-                      </p>
+                  <p className="text-sm font-bold text-red-600 shrink-0 ml-3">
+                    {formatCurrency(a.udhari)}
+                  </p>
+                </div>
+              ))}
+              {udhari.accounts.length > 8 && (
+                <p className="text-xs text-center text-slate-500 pt-1">
+                  +{udhari.accounts.length - 8} more
+                </p>
+              )}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-red-50 border border-red-200 mt-2">
+                <span className="text-sm font-semibold text-red-900">Total udhari</span>
+                <span className="text-sm font-bold text-red-600">{formatCurrency(udhari.totalUdhari)}</span>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Owner income */}
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] flex items-center gap-2">
+              <Users className="h-5 w-5 text-[var(--cricket-green)]" />
+              Income by owner
+            </h2>
+            <Link href="/admin/owners">
+              <Button variant="ghost" size="sm">Owners</Button>
+            </Link>
+          </div>
+          {ownerStats.length === 0 ? (
+            <p className="text-sm text-slate-500 py-6 text-center">No owner income recorded yet</p>
+          ) : (
+            <div className="space-y-2">
+              {ownerStats.map((o) => (
+                <div key={o.ownerId} className="p-3 rounded-xl admin-subtle">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-semibold text-[var(--navy)]">{o.name}</p>
+                    <p className="text-sm font-bold text-green-700">{formatCurrency(o.incomeTotal)}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-slate-500">
+                    <span>Bookings {formatCurrency(o.bookingIncome)}</span>
+                    <span>Old {formatCurrency(o.oldSessionIncome)}</span>
+                    <span>Other {formatCurrency(o.otherIncome)}</span>
+                    {o.expenseTotal > 0 && (
+                      <span className="text-red-500">Exp {formatCurrency(o.expenseTotal)}</span>
                     )}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] mb-5 flex items-center gap-2">
-            <Package className="h-5 w-5 text-[var(--cricket-green)]" />
-            Ball stock: {finance.totalBallsRemaining} left
-          </h2>
-          <div className="grid gap-2">
-            {quickLinks.map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="group flex items-center justify-between p-3.5 rounded-xl admin-subtle hover:border-[var(--cricket-green)]/30 hover:shadow-sm transition-all"
-              >
-                <span className="text-sm font-medium text-[var(--navy)] group-hover:text-[var(--brand-red)] transition-colors">
-                  {action.label}
-                </span>
-                <ArrowRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--brand-red)] group-hover:translate-x-0.5 transition-all" />
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
+
+      {/* Recent bookings */}
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)]">
+            Recent bookings
+          </h2>
+          <Link href="/admin/bookings">
+            <Button variant="ghost" size="sm">All bookings</Button>
+          </Link>
+        </div>
+        {recent.length === 0 ? (
+          <p className="text-sm text-slate-500 py-4 text-center">No bookings yet</p>
+        ) : (
+          <div className="space-y-2">
+            {recent.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between p-3 rounded-xl admin-subtle"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[var(--navy)]">{b.customerName}</p>
+                  <p className="text-xs text-slate-500">
+                    {formatDate(b.date)} · {b.slotLabel}
+                    {b.walkIn ? " · Walk-in" : " · Online"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <Badge status={b.status} theme="light" />
+                  <p className="text-xs font-semibold text-[var(--brand-red)] mt-1">
+                    {formatCurrency(b.slotPrice)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </AdminShell>
   );
 }

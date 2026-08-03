@@ -15,7 +15,7 @@ import { matchAmountReceived, matchUdhari, normalizeMatch } from "@/lib/matches"
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore, Booking, StadiumMatch, StadiumOwner } from "@/lib/types";
-import { IndianRupee, Loader2, Save } from "lucide-react";
+import { IndianRupee, Loader2, Save, Trash2 } from "lucide-react";
 
 type PayTarget =
   | { kind: "booking"; data: Booking }
@@ -138,6 +138,36 @@ export default function AdminUdhariPage() {
       load();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Save failed", "error");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const clearUdhari = async (account: UdhariAccount) => {
+    if (
+      !confirm(
+        `Clear udhari for ${account.customerName}?\n\n${formatDate(account.date)} · ${account.slotLabel}\nPending: ${formatCurrency(account.udhari)}\n\nThis sets udhari to ₹0. The booking/session stays — only the wrong pending amount is removed.`
+      )
+    ) {
+      return;
+    }
+
+    setActionId(account.id);
+    try {
+      if (account.kind === "booking" && account.booking) {
+        await patchBooking(account.booking.id, { clearUdhari: true });
+      } else if (account.kind === "old-session" && account.oldSession) {
+        const m = account.oldSession;
+        const updated = matches.map((row) =>
+          row.id === m.id ? { ...row, udhariAmount: 0 } : row
+        );
+        await patchAdmin("matches", updated);
+      }
+      toast("Udhari cleared", "success");
+      if (payTarget?.data.id === account.id) setPayTarget(null);
+      load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Clear failed", "error");
     } finally {
       setActionId(null);
     }
@@ -270,9 +300,22 @@ export default function AdminUdhariPage() {
               key: "actions",
               header: "",
               render: (a) => (
-                <Button size="sm" variant="outline" onClick={() => openPayment(a)}>
-                  Update payment
-                </Button>
+                <div className="flex flex-col gap-1 items-end">
+                  <Button size="sm" variant="outline" onClick={() => openPayment(a)}>
+                    Update payment
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    className="text-xs"
+                    disabled={actionId === a.id}
+                    onClick={() => clearUdhari(a)}
+                    title="Clear wrong udhari — sets pending to ₹0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Clear udhari
+                  </Button>
+                </div>
               ),
             },
           ]}
@@ -313,7 +356,18 @@ export default function AdminUdhariPage() {
               label="Owner / who received *"
               required
             />
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (!payTarget) return;
+                  const account = summary.accounts.find((a) => a.id === payTarget.data.id);
+                  if (account) clearUdhari(account);
+                }}
+                disabled={actionId === payTarget.data.id}
+              >
+                <Trash2 className="h-4 w-4" /> Clear udhari
+              </Button>
               <Button variant="ghost" onClick={() => setPayTarget(null)}>
                 Cancel
               </Button>

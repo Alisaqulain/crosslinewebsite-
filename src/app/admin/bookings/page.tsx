@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { OldSessionsSection } from "@/components/admin/OldSessionsSection";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -35,8 +37,12 @@ function parseBallQuantity(value: string, max: number): number {
   return Math.min(n, max);
 }
 
+type BookingsTab = "current" | "old-sessions";
+
 export default function AdminBookingsPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const [tab, setTab] = useState<BookingsTab>("current");
   const [store, setStore] = useState<AppStore | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<BookingStatus | "all">("all");
@@ -89,6 +95,20 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "old-sessions") {
+      setTab("old-sessions");
+    }
+  }, []);
+
+  const switchTab = (next: BookingsTab) => {
+    setTab(next);
+    router.replace(next === "old-sessions" ? "/admin/bookings?tab=old-sessions" : "/admin/bookings", {
+      scroll: false,
+    });
+  };
 
   const walkInSlots: BookingSlotView[] = useMemo(
     () =>
@@ -319,7 +339,33 @@ export default function AdminBookingsPage() {
   }, [walkInSlots, walkIn.slotId]);
 
   return (
-    <AdminShell title="Booking Management">
+    <AdminShell title="Bookings & Sessions">
+      <div className="flex flex-wrap gap-2 mb-6">
+        {(
+          [
+            { id: "current" as const, label: "Current bookings" },
+            { id: "old-sessions" as const, label: "Old sessions" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => switchTab(t.id)}
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold min-h-[44px] transition-colors ${
+              tab === t.id
+                ? "admin-filter-active bg-[var(--brand-red)]/10 text-[var(--brand-red)] border border-[var(--brand-red)]/20"
+                : "admin-filter bg-white text-[var(--text-muted)] border border-[var(--border)] hover:text-[var(--navy)]"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "old-sessions" ? (
+        <OldSessionsSection />
+      ) : (
+        <>
       {store && <BallStockBar store={store} />}
 
       <div className="flex flex-wrap gap-3 mb-6">
@@ -822,6 +868,8 @@ export default function AdminBookingsPage() {
             ]}
           />
         </Card>
+      )}
+        </>
       )}
     </AdminShell>
   );
