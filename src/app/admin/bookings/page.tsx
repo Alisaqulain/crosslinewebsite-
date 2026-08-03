@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { OldSessionsSection } from "@/components/admin/OldSessionsSection";
+import { BookingCalendar } from "@/components/admin/BookingCalendar";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -28,7 +29,7 @@ import { getBookingSlotsForDate } from "@/lib/slots";
 import { getQualityLabel } from "@/lib/qualities";
 import { bookingAmountReceived, bookingUdhari } from "@/lib/udhari";
 import type { AppStore, BallQuality, Booking, BookingSlotView, BookingStatus } from "@/lib/types";
-import { Check, X, Loader2, Plus, IndianRupee, Save, Trash2 } from "lucide-react";
+import { Check, X, Loader2, Plus, IndianRupee, Save, Trash2, CalendarDays, List } from "lucide-react";
 
 function parseBallQuantity(value: string, max: number): number {
   if (value.trim() === "") return 0;
@@ -38,11 +39,15 @@ function parseBallQuantity(value: string, max: number): number {
 }
 
 type BookingsTab = "current" | "old-sessions";
+type ViewMode = "calendar" | "list";
 
 export default function AdminBookingsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [tab, setTab] = useState<BookingsTab>("current");
+  const [viewMode, setViewMode] = useState<ViewMode>("calendar");
+  const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth());
   const [store, setStore] = useState<AppStore | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<BookingStatus | "all">("all");
@@ -77,10 +82,7 @@ export default function AdminBookingsPage() {
     setLoading(true);
     try {
       const [{ bookings: data }, admin] = await Promise.all([
-        fetchBookings({
-          status: filter === "all" ? undefined : filter,
-          date: dateFilter || undefined,
-        }),
+        fetchBookings(),
         fetchAdminStore(),
       ]);
       setBookings(data);
@@ -90,7 +92,25 @@ export default function AdminBookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filter, dateFilter, toast]);
+  }, [toast]);
+
+  const filteredBookings = useMemo(() => {
+    let list = bookings;
+    if (filter !== "all") list = list.filter((b) => b.status === filter);
+    if (dateFilter) list = list.filter((b) => b.date === dateFilter);
+    return list;
+  }, [bookings, filter, dateFilter]);
+
+  const openWalkInForDate = (date: string) => {
+    setWalkIn((w) => ({ ...w, date }));
+    setShowWalkIn(true);
+    setViewMode("list");
+  };
+
+  const openListForDate = (date: string) => {
+    setDateFilter(date);
+    setViewMode("list");
+  };
 
   useEffect(() => {
     load();
@@ -366,16 +386,72 @@ export default function AdminBookingsPage() {
         <OldSessionsSection />
       ) : (
         <>
-      {store && <BallStockBar store={store} />}
+      {store && viewMode === "list" && <BallStockBar store={store} />}
 
-      <div className="flex flex-wrap gap-3 mb-6">
-        <Button size="sm" onClick={() => setShowWalkIn(!showWalkIn)} className="min-h-[44px]">
-          <Plus className="h-4 w-4" />
-          Direct / Walk-in Match
-        </Button>
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex gap-1 p-1 rounded-xl bg-slate-100 border border-[var(--border)]">
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold min-h-[44px] transition-colors ${
+              viewMode === "calendar"
+                ? "bg-white text-[#1a73e8] shadow-sm"
+                : "text-slate-600 hover:text-[var(--navy)]"
+            }`}
+          >
+            <CalendarDays className="h-4 w-4" />
+            Calendar
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold min-h-[44px] transition-colors ${
+              viewMode === "list"
+                ? "bg-white text-[var(--brand-red)] shadow-sm"
+                : "text-slate-600 hover:text-[var(--navy)]"
+            }`}
+          >
+            <List className="h-4 w-4" />
+            List
+          </button>
+        </div>
+
+        {viewMode === "list" && (
+          <Button size="sm" onClick={() => setShowWalkIn(!showWalkIn)} className="min-h-[44px]">
+            <Plus className="h-4 w-4" />
+            Direct / Walk-in Match
+          </Button>
+        )}
+
+        {viewMode === "list" && dateFilter && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setDateFilter("")}
+            className="text-xs"
+          >
+            Clear date filter ({formatDate(dateFilter)})
+          </Button>
+        )}
       </div>
 
-      {showWalkIn && store && (
+      {viewMode === "calendar" && !loading && (
+        <div className="relative mb-6">
+          <BookingCalendar
+            bookings={bookings}
+            year={calendarYear}
+            month={calendarMonth}
+            onMonthChange={(y, m) => {
+              setCalendarYear(y);
+              setCalendarMonth(m);
+            }}
+            onDateClick={openListForDate}
+            onAddBooking={openWalkInForDate}
+          />
+        </div>
+      )}
+
+      {viewMode === "list" && showWalkIn && store && (
         <Card className="mb-6 space-y-4">
           <h3 className="font-semibold text-[var(--navy)]">Direct booking (not from website)</h3>
           <p className="text-xs text-slate-500">
@@ -534,6 +610,7 @@ export default function AdminBookingsPage() {
         </Card>
       )}
 
+      {viewMode === "list" && (
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="flex flex-wrap gap-2">
           {(["all", "pending", "approved", "rejected"] as const).map((f) => (
@@ -561,8 +638,9 @@ export default function AdminBookingsPage() {
           />
         </div>
       </div>
+      )}
 
-      {approveTarget && (
+      {viewMode === "list" && approveTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <Card className="w-full max-w-md space-y-4 shadow-xl">
             <h3 className="font-semibold text-[var(--navy)]">Approve booking</h3>
@@ -585,7 +663,7 @@ export default function AdminBookingsPage() {
         </div>
       )}
 
-      {payTarget && (
+      {viewMode === "list" && payTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <Card className="w-full max-w-md space-y-4 shadow-xl">
             <h3 className="font-semibold text-[var(--navy)] flex items-center gap-2">
@@ -638,7 +716,7 @@ export default function AdminBookingsPage() {
         </div>
       )}
 
-      {ballTarget && store && (
+      {viewMode === "list" && ballTarget && store && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <Card className="w-full max-w-md space-y-4 shadow-xl">
             <h3 className="font-semibold text-[var(--navy)]">Assign balls (after match)</h3>
@@ -717,14 +795,15 @@ export default function AdminBookingsPage() {
         </div>
       )}
 
-      {loading ? (
+      {viewMode === "list" &&
+        (loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-[#F7931E]" />
         </div>
       ) : (
         <Card className="p-0 md:p-6">
           <ResponsiveTable
-            data={bookings}
+            data={filteredBookings}
             rowKey={(b) => b.id}
             emptyMessage="No bookings found"
             columns={[
@@ -868,6 +947,12 @@ export default function AdminBookingsPage() {
             ]}
           />
         </Card>
+      ))}
+
+      {viewMode === "calendar" && loading && (
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-[#F7931E]" />
+        </div>
       )}
         </>
       )}
