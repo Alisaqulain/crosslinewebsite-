@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { fetchAdminStore } from "@/lib/api-client";
 import { getFinanceSummary } from "@/lib/finance";
+import { getOwnerName } from "@/lib/owners";
+import { getQualityLabel } from "@/lib/qualities";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore } from "@/lib/types";
 import {
@@ -57,6 +59,35 @@ export default function AdminDashboardPage() {
 
   const udhari = finance.udhari;
   const ownerStats = finance.ownerStats.filter((o) => o.incomeTotal > 0 || o.expenseTotal > 0);
+  const ballPurchasesByOwner = [...store.ballPurchases]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .reduce<
+      {
+        ownerId: string;
+        ownerName: string;
+        purchases: typeof store.ballPurchases;
+        total: number;
+        totalBalls: number;
+      }[]
+    >((groups, purchase) => {
+      const ownerId = purchase.ownerId ?? "";
+      let group = groups.find((g) => g.ownerId === ownerId);
+      if (!group) {
+        group = {
+          ownerId,
+          ownerName: ownerId ? getOwnerName(store, ownerId) : "Not assigned",
+          purchases: [],
+          total: 0,
+          totalBalls: 0,
+        };
+        groups.push(group);
+      }
+      group.purchases.push(purchase);
+      group.total += purchase.purchasePrice;
+      group.totalBalls += purchase.quantity;
+      return groups;
+    }, [])
+    .sort((a, b) => b.total - a.total);
   const manualIncomeAll = store.financeEntries
     .filter((e) => e.type === "income")
     .reduce((s, e) => s + e.amount, 0);
@@ -282,12 +313,79 @@ export default function AdminDashboardPage() {
                       <span className="text-red-500">Exp {formatCurrency(o.expenseTotal)}</span>
                     )}
                   </div>
+                  {o.ballPurchaseExpense > 0 && (
+                    <p className="text-[10px] text-red-600 mt-1">
+                      Ball purchases {formatCurrency(o.ballPurchaseExpense)}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </Card>
       </div>
+
+      {/* Ball purchases by owner */}
+      <Card className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] flex items-center gap-2">
+            <Package className="h-5 w-5 text-[#F7931E]" />
+            Ball purchases by owner
+          </h2>
+          <Link href="/admin/inventory">
+            <Button variant="ghost" size="sm">Ball Stock</Button>
+          </Link>
+        </div>
+        {ballPurchasesByOwner.length === 0 ? (
+          <p className="text-sm text-slate-500 py-6 text-center">No ball purchases recorded yet</p>
+        ) : (
+          <div className="space-y-4">
+            {ballPurchasesByOwner.map((group) => (
+              <div key={group.ownerId || "__none__"} className="rounded-xl admin-subtle overflow-hidden">
+                <div className="flex items-center justify-between p-3 bg-white/60 border-b border-[var(--border)]">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--navy)]">{group.ownerName}</p>
+                    <p className="text-[10px] text-slate-500">
+                      {group.purchases.length} purchase(s) · {group.totalBalls} balls
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-red-600">{formatCurrency(group.total)}</p>
+                </div>
+                <div className="divide-y divide-[var(--border)]">
+                  {group.purchases.map((p) => {
+                    const pricePerBall =
+                      p.quantity > 0 ? Math.round(p.purchasePrice / p.quantity) : 0;
+                    return (
+                      <div key={p.id} className="flex items-start justify-between gap-3 p-3 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[var(--navy)]">
+                            {getQualityLabel(store, p.quality)} × {p.quantity}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {formatDate(p.date)}
+                            {p.supplier ? ` · ${p.supplier}` : ""}
+                            {p.notes ? ` · ${p.notes}` : ""}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-semibold text-red-600">{formatCurrency(p.purchasePrice)}</p>
+                          {pricePerBall > 0 && (
+                            <p className="text-[10px] text-slate-500">₹{pricePerBall}/ball</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-red-50 border border-red-200 text-sm font-bold">
+              <span className="text-red-900">All ball purchases</span>
+              <span className="text-red-600">{formatCurrency(finance.ballPurchaseTotal)}</span>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Recent bookings */}
       <Card>
