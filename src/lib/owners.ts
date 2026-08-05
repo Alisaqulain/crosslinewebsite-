@@ -21,6 +21,7 @@ export interface OwnerFinanceStat {
   oldSessionIncome: number;
   otherIncome: number;
   dieselExpense: number;
+  ballPurchaseExpense: number;
   otherExpense: number;
   incomeCount: number;
   expenseCount: number;
@@ -45,11 +46,14 @@ export function getOwnerFinanceStats(store: AppStore): OwnerFinanceStat[] {
     const dieselRows = store.dieselExpenses.filter((d) => d.ownerId === owner.id);
     const dieselExpense = dieselRows.reduce((s, d) => s + dieselAmount(d), 0);
 
+    const ballPurchaseRows = store.ballPurchases.filter((p) => p.ownerId === owner.id);
+    const ballPurchaseExpense = ballPurchaseRows.reduce((s, p) => s + p.purchasePrice, 0);
+
     const otherExpenseRows = (store.otherExpenses ?? []).filter((o) => o.ownerId === owner.id);
     const otherExpense = otherExpenseRows.reduce((s, o) => s + o.amount, 0);
 
     const incomeTotal = bookingIncome + oldSessionIncome + otherIncome;
-    const expenseTotal = dieselExpense + otherExpense;
+    const expenseTotal = dieselExpense + ballPurchaseExpense + otherExpense;
 
     return {
       ownerId: owner.id,
@@ -60,12 +64,13 @@ export function getOwnerFinanceStats(store: AppStore): OwnerFinanceStat[] {
       oldSessionIncome,
       otherIncome,
       dieselExpense,
+      ballPurchaseExpense,
       otherExpense,
       incomeCount:
         bookingRows.filter((b) => bookingAmountReceived(b) > 0).length +
         oldSessionRows.filter((m) => matchAmountReceived(m) > 0).length +
         otherIncomeRows.length,
-      expenseCount: dieselRows.length + otherExpenseRows.length,
+      expenseCount: dieselRows.length + ballPurchaseRows.length + otherExpenseRows.length,
       net: incomeTotal - expenseTotal,
     };
   });

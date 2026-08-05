@@ -164,7 +164,7 @@ export function DashboardFinanceSummary({
                     <span className="text-xs text-slate-400"> ({o.expenseCount} entries)</span>
                   </p>
                   <p className="text-xs text-slate-500 pl-2">
-                    Diesel {formatCurrency(o.dieselExpense)} · Other {formatCurrency(o.otherExpense)}
+                    Diesel {formatCurrency(o.dieselExpense)} · Balls {formatCurrency(o.ballPurchaseExpense)} · Other {formatCurrency(o.otherExpense)}
                   </p>
                   <p className={`pt-2 font-bold ${o.net >= 0 ? "text-green-700" : "text-red-600"}`}>
                     Net: {formatCurrency(o.net)}

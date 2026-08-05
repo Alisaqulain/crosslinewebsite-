@@ -87,6 +87,8 @@ export interface BallPurchase {
   purchasePrice: number;
   date: string;
   supplier: string;
+  /** Partner / owner who paid for this purchase */
+  ownerId?: string;
   notes?: string;
 }
 

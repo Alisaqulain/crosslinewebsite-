@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { BallQualitySelect } from "@/components/admin/BallQualitySelect";
+import { OwnerSelect } from "@/components/admin/OwnerSelect";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -12,8 +13,9 @@ import { useToast } from "@/components/ui/Toast";
 import { getAvailableBalls, normalizeBallQuality } from "@/lib/ball-stock";
 import { getBallStock } from "@/lib/finance";
 import { getQualityLabel } from "@/lib/qualities";
+import { getOwnerName } from "@/lib/owners";
 import { formatCurrency } from "@/lib/utils";
-import type { AppStore, BallPurchase, BallQuality, BallUsage } from "@/lib/types";
+import type { AppStore, BallPurchase, BallQuality, BallUsage, StadiumOwner } from "@/lib/types";
 import { Package, ArrowDown, ArrowUp, Loader2, Save, Search } from "lucide-react";
 
 const emptyPurchase = () => ({
@@ -22,6 +24,7 @@ const emptyPurchase = () => ({
   purchasePrice: 0,
   date: new Date().toISOString().split("T")[0],
   supplier: "",
+  ownerId: "",
   notes: "",
 });
 
@@ -36,6 +39,7 @@ const emptyUsage = () => ({
 export default function AdminInventoryPage() {
   const { toast } = useToast();
   const [store, setStore] = useState<AppStore | null>(null);
+  const [owners, setOwners] = useState<StadiumOwner[]>([]);
   const [purchases, setPurchases] = useState<BallPurchase[]>([]);
   const [usage, setUsage] = useState<BallUsage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +55,7 @@ export default function AdminInventoryPage() {
   const load = () => {
     fetchAdminStore().then(({ store: s }) => {
       setStore(s);
+      setOwners(s.owners ?? []);
       setPurchases(s.ballPurchases);
       setUsage(s.ballUsage);
       setLoading(false);
@@ -81,6 +86,7 @@ export default function AdminInventoryPage() {
         p.supplier.toLowerCase().includes(q) ||
         p.date.includes(q) ||
         (store ? getQualityLabel(store, p.quality) : p.quality).toLowerCase().includes(q) ||
+        (store && p.ownerId ? getOwnerName(store, p.ownerId).toLowerCase().includes(q) : false) ||
         String(p.purchasePrice).includes(q) ||
         (p.notes ?? "").toLowerCase().includes(q)
     );
@@ -99,8 +105,8 @@ export default function AdminInventoryPage() {
 
   const savePurchase = () => {
     const quality = normalizeBallQuality(purchaseForm.quality);
-    if (!quality || !purchaseForm.quantity || !purchaseForm.supplier) {
-      toast("Fill quality name, quantity and supplier", "error");
+    if (!quality || !purchaseForm.quantity) {
+      toast("Fill ball quality and quantity", "error");
       return;
     }
     const totalCost = purchaseForm.quantity * pricePerBall;
@@ -108,7 +114,12 @@ export default function AdminInventoryPage() {
       toast("Enter price per ball", "error");
       return;
     }
-    const payload = { ...purchaseForm, quality, purchasePrice: totalCost };
+    if (!purchaseForm.ownerId && !owners[0]?.id) {
+      toast("Select who paid for this purchase", "error");
+      return;
+    }
+    const ownerId = purchaseForm.ownerId || owners[0]?.id || "";
+    const payload = { ...purchaseForm, quality, purchasePrice: totalCost, ownerId };
     if (editingPurchaseId) {
       const next = purchases.map((p) =>
         p.id === editingPurchaseId ? { ...p, ...payload } : p
@@ -165,6 +176,7 @@ export default function AdminInventoryPage() {
       purchasePrice: p.purchasePrice,
       date: p.date,
       supplier: p.supplier,
+      ownerId: p.ownerId ?? "",
       notes: p.notes ?? "",
     });
     setPricePerBall(p.quantity > 0 ? Math.round(p.purchasePrice / p.quantity) : 0);
@@ -314,9 +326,23 @@ export default function AdminInventoryPage() {
               />
             </div>
             <div>
-              <Label>Supplier / Source</Label>
-              <Input value={purchaseForm.supplier} onChange={(e) => setPurchaseForm({ ...purchaseForm, supplier: e.target.value })} />
+              <Label>Shop / seller (optional)</Label>
+              <Input
+                value={purchaseForm.supplier}
+                onChange={(e) => setPurchaseForm({ ...purchaseForm, supplier: e.target.value })}
+                placeholder="e.g. Local sports shop"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Where you bought the balls (optional).
+              </p>
             </div>
+            <OwnerSelect
+              owners={owners}
+              value={purchaseForm.ownerId}
+              onChange={(ownerId) => setPurchaseForm({ ...purchaseForm, ownerId })}
+              label="Paid by / recorded by *"
+              required
+            />
             <div>
               <Label>Quantity</Label>
               <Input type="number" value={purchaseForm.quantity || ""} onChange={(e) => setPurchaseForm({ ...purchaseForm, quantity: Number(e.target.value) })} />
@@ -430,10 +456,14 @@ export default function AdminInventoryPage() {
                       {store ? getQualityLabel(store, p.quality) : p.quality} × {p.quantity}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {p.date} · {p.supplier} · {formatCurrency(p.purchasePrice)} total
+                      {p.date}
+                      {p.supplier ? ` · ${p.supplier}` : ""} · {formatCurrency(p.purchasePrice)} total
                       {p.quantity > 0
                         ? ` (${p.quantity} @ ₹${Math.round(p.purchasePrice / p.quantity)}/ball)`
                         : ""}
+                      {store && p.ownerId && (
+                        <span className="text-red-700"> · By {getOwnerName(store, p.ownerId)}</span>
+                      )}
                       {p.notes ? ` · ${p.notes}` : ""}
                     </p>
                   </div>

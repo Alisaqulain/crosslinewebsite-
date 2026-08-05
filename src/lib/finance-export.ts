@@ -62,6 +62,7 @@ export interface OwnerExportRow {
   otherIncome: number;
   incomeTotal: number;
   dieselExpense: number;
+  ballPurchaseExpense: number;
   otherExpense: number;
   expenseTotal: number;
   net: number;
@@ -155,6 +156,7 @@ function buildOwnerRows(store: AppStore, from: string, to: string): OwnerExportR
     otherIncome: 0,
     incomeTotal: 0,
     dieselExpense: 0,
+    ballPurchaseExpense: 0,
     otherExpense: 0,
     expenseTotal: 0,
     net: 0,
@@ -204,6 +206,14 @@ function buildOwnerRows(store: AppStore, from: string, to: string): OwnerExportR
     if (!row) continue;
     row.otherExpense += o.amount;
     row.expenseTotal += o.amount;
+  }
+
+  for (const p of store.ballPurchases.filter((x) => inRange(x.date, from, to))) {
+    if (!p.ownerId) continue;
+    const row = byId.get(p.ownerId);
+    if (!row) continue;
+    row.ballPurchaseExpense += p.purchasePrice;
+    row.expenseTotal += p.purchasePrice;
   }
 
   return rows
@@ -332,7 +342,7 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
       category: "Ball purchase",
       description: `${p.quantity} × ${getQualityLabel(store, p.quality)} — ${p.supplier}`,
       amount: p.purchasePrice,
-      owner: "—",
+      owner: getOwnerName(store, p.ownerId),
     });
   }
 
@@ -470,6 +480,7 @@ export async function downloadExcelReport(data: FinanceReportData) {
     "Other income (₹)": fmt(r.otherIncome),
     "Total earned (₹)": fmt(r.incomeTotal),
     "Diesel expense (₹)": fmt(r.dieselExpense),
+    "Ball purchase (₹)": fmt(r.ballPurchaseExpense),
     "Other expense (₹)": fmt(r.otherExpense),
     "Total expense (₹)": fmt(r.expenseTotal),
     "Net (₹)": fmt(r.net),
@@ -632,7 +643,7 @@ export async function downloadPdfReport(data: FinanceReportData) {
   heading("OWNERS — who earned & spent how much");
   autoTable(doc, {
     startY: y,
-    head: [["Owner", "Earned", "Expense", "Net", "Bookings", "Other inc.", "Diesel", "Other exp."]],
+    head: [["Owner", "Earned", "Expense", "Net", "Bookings", "Other inc.", "Diesel", "Ball purchase", "Other exp."]],
     body: data.ownerRows.length
       ? data.ownerRows.map((r) => [
           r.name,
@@ -642,9 +653,10 @@ export async function downloadPdfReport(data: FinanceReportData) {
           `₹${r.bookingIncome.toLocaleString("en-IN")}`,
           `₹${r.otherIncome.toLocaleString("en-IN")}`,
           `₹${r.dieselExpense.toLocaleString("en-IN")}`,
+          `₹${r.ballPurchaseExpense.toLocaleString("en-IN")}`,
           `₹${r.otherExpense.toLocaleString("en-IN")}`,
         ])
-      : [["—", "No owner data", "", "", "", "", "", ""]],
+      : [["—", "No owner data", "", "", "", "", "", "", ""]],
     styles: { fontSize: 7, cellPadding: 2 },
     headStyles: { fillColor: [100, 50, 150], textColor: 255 },
     theme: "grid",
