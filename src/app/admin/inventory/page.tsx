@@ -17,6 +17,7 @@ import { getOwnerName } from "@/lib/owners";
 import { formatCurrency } from "@/lib/utils";
 import type { AppStore, BallPurchase, BallQuality, BallUsage, StadiumOwner } from "@/lib/types";
 import { Package, ArrowDown, ArrowUp, Loader2, Save, Search } from "lucide-react";
+import type { BallStockSummary } from "@/lib/finance";
 
 const emptyPurchase = () => ({
   quality: "" as BallQuality,
@@ -216,6 +217,55 @@ export default function AdminInventoryPage() {
     save("ballUsage", usage.filter((u) => u.id !== id));
   };
 
+  const purchasesForQuality = (quality: string) =>
+    [...purchases.filter((p) => p.quality === quality)].sort((a, b) => b.date.localeCompare(a.date));
+
+  const editStockCard = (item: BallStockSummary) => {
+    const list = purchasesForQuality(item.quality);
+    if (list.length > 0) {
+      startEditPurchase(list[0]);
+      if (list.length > 1) {
+        toast(`Editing latest purchase — ${list.length - 1} more in Purchase History`, "success");
+      }
+    } else {
+      setEditingPurchaseId(null);
+      setPurchaseForm({ ...emptyPurchase(), quality: item.quality });
+      setPricePerBall(0);
+      setShowPurchase(true);
+      setShowUsage(false);
+    }
+  };
+
+  const deleteStockType = async (item: BallStockSummary) => {
+    const typePurchases = purchases.filter((p) => p.quality === item.quality);
+    const typeUsage = usage.filter((u) => u.quality === item.quality);
+    if (typeUsage.some((u) => u.bookingId)) {
+      toast("Some balls used in bookings — clear ball assignment from Bookings first", "error");
+      return;
+    }
+    if (typePurchases.length === 0 && typeUsage.length === 0) {
+      toast("Nothing to delete for this ball type", "error");
+      return;
+    }
+    const msg =
+      typeUsage.length > 0
+        ? `Delete all "${item.label}" stock?\n\nThis removes ${typePurchases.length} purchase(s) and ${typeUsage.length} usage record(s).`
+        : `Delete all ${typePurchases.length} purchase(s) for "${item.label}"?`;
+    if (!confirm(msg)) return;
+    try {
+      const nextPurchases = purchases.filter((p) => p.quality !== item.quality);
+      const { store: afterPurchases } = await patchAdmin("ballPurchases", nextPurchases);
+      const nextUsage = afterPurchases.ballUsage.filter((u: BallUsage) => u.quality !== item.quality);
+      const { store: updated } = await patchAdmin("ballUsage", nextUsage);
+      setStore(updated);
+      setPurchases(updated.ballPurchases);
+      setUsage(updated.ballUsage);
+      toast(`Deleted "${item.label}" stock`, "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Delete failed", "error");
+    }
+  };
+
   const stock = store ? getBallStock(store) : [];
   const totalRemaining = stock.reduce((s, b) => s + b.remaining, 0);
   const availableUsage = store
@@ -257,9 +307,16 @@ export default function AdminInventoryPage() {
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         {stock.map((item) => (
           <Card key={item.quality} hover>
-            <div className="flex items-center gap-3 mb-4">
-              <Package className="h-8 w-8 text-[#F7931E]" />
-              <p className="font-semibold text-[var(--navy)]">{item.label}</p>
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <Package className="h-8 w-8 text-[#F7931E] shrink-0" />
+                <p className="font-semibold text-[var(--navy)] truncate">{item.label}</p>
+              </div>
+              <EntryActions
+                onEdit={() => editStockCard(item)}
+                onDelete={() => deleteStockType(item)}
+                deleteLabel={`Delete all ${item.label} stock`}
+              />
             </div>
             <div className="text-3xl font-bold gradient-text font-[family-name:var(--font-sora)]">{item.remaining}</div>
             <p className="text-xs text-slate-500 mt-1">available in stock</p>
@@ -322,7 +379,8 @@ export default function AdminInventoryPage() {
                 value={purchaseForm.quality}
                 onChange={(quality) => setPurchaseForm({ ...purchaseForm, quality })}
                 className="mt-1"
-                placeholder="e.g. Tonk, Practice"
+                placeholder="e.g. Tonk, Practice, Club red ball"
+                forPurchase
               />
             </div>
             <div>
