@@ -5,7 +5,7 @@ import { deleteGalleryImage, saveGalleryImage } from "@/lib/uploads";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  if (!isAdminRequest(req)) return unauthorized();
+  if (!(await isAdminRequest(req))) return unauthorized();
 
   try {
     const formData = await req.formData();
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!isAdminRequest(req)) return unauthorized();
+  if (!(await isAdminRequest(req))) return unauthorized();
 
   const src = req.nextUrl.searchParams.get("src");
   if (!src) {

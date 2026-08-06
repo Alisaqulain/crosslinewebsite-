@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
-import { OwnerSelect } from "@/components/admin/OwnerSelect";
+import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
+import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -33,6 +34,7 @@ export default function AdminDieselPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
   useEffect(() => {
     fetchAdminStore().then(({ store: s }) => {
@@ -58,14 +60,15 @@ export default function AdminDieselPage() {
 
   const submitEntry = () => {
     const amount = parseAmount(form.amount);
-    if (!amount || !form.ownerId) {
+    if (!amount || !(lockedOwnerId || form.ownerId)) {
       toast("Fill amount (₹) and select owner", "error");
       return;
     }
+    const ownerId = defaultOwnerId(lockedOwnerId, form.ownerId, owners);
     if (editingId) {
       const next = expenses.map((e) =>
         e.id === editingId
-          ? { ...e, date: form.date, amount, purpose: form.purpose, shift: "night" as const, ownerId: form.ownerId }
+          ? { ...e, date: form.date, amount, purpose: form.purpose, shift: "night" as const, ownerId }
           : e
       );
       save(next);
@@ -77,7 +80,7 @@ export default function AdminDieselPage() {
         amount,
         purpose: form.purpose,
         shift: "night",
-        ownerId: form.ownerId,
+        ownerId,
       };
       save([entry, ...expenses]);
     }
@@ -136,10 +139,12 @@ export default function AdminDieselPage() {
               placeholder="e.g. 2500"
             />
           </div>
-          <OwnerSelect
+          <SessionOwnerSelect
             owners={owners}
-            value={form.ownerId}
+            value={lockedOwnerId ?? form.ownerId}
             onChange={(ownerId) => setForm({ ...form, ownerId })}
+            lockedOwnerId={lockedOwnerId}
+            lockedOwnerName={lockedOwnerName}
             label="Paid by / recorded by"
             required
           />

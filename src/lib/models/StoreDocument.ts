@@ -7,6 +7,7 @@ const StoreSchema = new Schema<AppStore & { _id: string }>(
   {
     _id: { type: String, required: true, default: STORE_DOC_ID },
     owners: { type: Schema.Types.Mixed, default: [] },
+    adminUsers: { type: Schema.Types.Mixed, default: [] },
     bookings: { type: Schema.Types.Mixed, default: [] },
     slots: { type: Schema.Types.Mixed, default: [] },
     blockedDates: { type: [String], default: [] },

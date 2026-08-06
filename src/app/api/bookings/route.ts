@@ -7,7 +7,7 @@ import type { BallQuality, Booking, MatchType } from "@/lib/types";
 import { normalizeBallQuality, upsertBallUsageForBooking } from "@/lib/ball-stock";
 
 export async function GET(req: NextRequest) {
-  if (!isAdminRequest(req)) return unauthorized();
+  if (!(await isAdminRequest(req))) return unauthorized();
   const store = await readStore();
   const status = req.nextUrl.searchParams.get("status");
   const date = req.nextUrl.searchParams.get("date");
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const store = await readStore();
     const walkIn = Boolean(body.walkIn);
 
-    if (walkIn && !isAdminRequest(req)) return unauthorized();
+    if (walkIn && !(await isAdminRequest(req))) return unauthorized();
 
     const slot = store.slots.find((s) => s.id === body.slotId);
     if (!slot) {

@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
 import { Input, Label, Select } from "@/components/ui/Input";
-import { OwnerSelect } from "@/components/admin/OwnerSelect";
+import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
+import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { BallQualitySelect } from "@/components/admin/BallQualitySelect";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import {
@@ -77,6 +78,13 @@ export default function AdminBookingsPage() {
     udhariAmount: "0" as string | number,
     receivedByOwnerId: "",
   });
+  const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
+
+  useEffect(() => {
+    if (!lockedOwnerId) return;
+    setWalkIn((w) => ({ ...w, receivedByOwnerId: lockedOwnerId }));
+    setPaymentOwnerId(lockedOwnerId);
+  }, [lockedOwnerId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -196,7 +204,8 @@ export default function AdminBookingsPage() {
       toast("Enter a valid udhari amount", "error");
       return;
     }
-    if (!paymentOwnerId) {
+    const ownerId = defaultOwnerId(lockedOwnerId, paymentOwnerId, store?.owners ?? []);
+    if (!ownerId) {
       toast("Select owner — who received / recorded this booking", "error");
       return;
     }
@@ -206,7 +215,7 @@ export default function AdminBookingsPage() {
         recordPayment: true,
         amountReceived: received,
         udhariAmount: udhari,
-        receivedByOwnerId: paymentOwnerId || null,
+        receivedByOwnerId: ownerId,
       });
       toast(
         udhari > 0 ? `Saved — ${formatCurrency(udhari)} udhari` : "Full payment recorded",
@@ -296,7 +305,8 @@ export default function AdminBookingsPage() {
       toast("Select a session", "error");
       return;
     }
-    if (!walkIn.receivedByOwnerId) {
+    const ownerId = defaultOwnerId(lockedOwnerId, walkIn.receivedByOwnerId, store?.owners ?? []);
+    if (!ownerId) {
       toast("Select owner — required for every booking", "error");
       return;
     }
@@ -322,7 +332,7 @@ export default function AdminBookingsPage() {
             ? parseAmount(walkIn.amountReceived)
             : undefined,
         udhariAmount: parseAmount(walkIn.udhariAmount),
-        receivedByOwnerId: walkIn.receivedByOwnerId || undefined,
+        receivedByOwnerId: ownerId,
       });
       toast("Direct booking saved — stock updated", "success");
       setShowWalkIn(false);
@@ -531,10 +541,12 @@ export default function AdminBookingsPage() {
               </p>
             </div>
             {store && (
-              <OwnerSelect
+              <SessionOwnerSelect
                 owners={store.owners ?? []}
-                value={walkIn.receivedByOwnerId}
+                value={lockedOwnerId ?? walkIn.receivedByOwnerId}
                 onChange={(receivedByOwnerId) => setWalkIn({ ...walkIn, receivedByOwnerId })}
+                lockedOwnerId={lockedOwnerId}
+                lockedOwnerName={lockedOwnerName}
                 label="Owner / who received *"
                 required
               />
@@ -696,10 +708,12 @@ export default function AdminBookingsPage() {
               </p>
             </div>
             {store && (
-              <OwnerSelect
+              <SessionOwnerSelect
                 owners={store.owners ?? []}
-                value={paymentOwnerId}
+                value={lockedOwnerId ?? paymentOwnerId}
                 onChange={setPaymentOwnerId}
+                lockedOwnerId={lockedOwnerId}
+                lockedOwnerName={lockedOwnerName}
                 label="Owner / who received *"
                 required
               />

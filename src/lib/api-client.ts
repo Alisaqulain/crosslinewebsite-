@@ -167,3 +167,50 @@ export async function previewClearMonth(year: number, month: number) {
   if (!res.ok) throw new Error(json.error ?? "Preview failed");
   return json.preview as import("./clear-month").ClearPeriodPreview;
 }
+
+export async function fetchAdminUsers() {
+  const res = await fetch("/api/admin/users", { headers: adminHeaders(), cache: "no-store" });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Failed to load users");
+  return json as { users: import("./types").AdminUser[]; owners: import("./types").StadiumOwner[] };
+}
+
+export async function createAdminUser(data: {
+  username: string;
+  password: string;
+  ownerId: string;
+}) {
+  const res = await fetch("/api/admin/users", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Failed to create login");
+  return json;
+}
+
+export async function updateAdminUser(data: {
+  userId: string;
+  password?: string;
+  newUsername?: string;
+}) {
+  const res = await fetch("/api/admin/users", {
+    method: "PATCH",
+    headers: adminHeaders(),
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Update failed");
+  return json;
+}
+
+export async function deleteAdminUser(userId: string) {
+  const res = await fetch(`/api/admin/users?userId=${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    headers: adminHeaders(),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Delete failed");
+  return json;
+}

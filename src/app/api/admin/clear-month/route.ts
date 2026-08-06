@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, writeStore } from "@/lib/db";
-import { isAdminRequest, unauthorized } from "@/lib/auth";
+import { getAdminSession, unauthorized } from "@/lib/auth";
 import { clearPeriodData, previewClearPeriod } from "@/lib/clear-month";
 import { getCalendarMonthRange } from "@/lib/finance-export";
 import { getFinanceSummary } from "@/lib/finance";
@@ -19,7 +19,8 @@ function resolveRange(body: { from?: string; to?: string; year?: number; month?:
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminRequest(req)) return unauthorized();
+  const session = await getAdminSession(req);
+  if (!session) return unauthorized();
   try {
     const body = await req.json();
     const range = resolveRange(body);
@@ -62,7 +63,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAdminRequest(req)) return unauthorized();
+  const session = await getAdminSession(req);
+  if (!session) return unauthorized();
   const from = req.nextUrl.searchParams.get("from") ?? "";
   const to = req.nextUrl.searchParams.get("to") ?? "";
   const year = Number(req.nextUrl.searchParams.get("year"));

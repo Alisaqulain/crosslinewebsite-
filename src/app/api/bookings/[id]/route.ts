@@ -18,7 +18,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdminRequest(req)) return unauthorized();
+  if (!(await isAdminRequest(req))) return unauthorized();
   const { id } = await params;
   const body = await req.json();
 
@@ -242,7 +242,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdminRequest(req)) return unauthorized();
+  if (!(await isAdminRequest(req))) return unauthorized();
   const { id } = await params;
 
   const existing = await readStore();

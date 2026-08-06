@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
-import { OwnerSelect } from "@/components/admin/OwnerSelect";
+import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
+import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -43,6 +44,7 @@ export default function AdminOtherExpensesPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
   useEffect(() => {
     fetchAdminStore().then(({ store: s }) => {
@@ -73,13 +75,14 @@ export default function AdminOtherExpensesPage() {
       toast("Title and a valid amount are required", "error");
       return;
     }
-    if (!form.ownerId) {
+    if (!(lockedOwnerId || form.ownerId)) {
       toast("Select who paid / recorded this expense", "error");
       return;
     }
+    const ownerId = defaultOwnerId(lockedOwnerId, form.ownerId, owners);
     if (editingId) {
       const next = expenses.map((e) =>
-        e.id === editingId ? { ...e, ...form, amount } : e
+        e.id === editingId ? { ...e, ...form, amount, ownerId } : e
       );
       save(next);
       setEditingId(null);
@@ -88,6 +91,7 @@ export default function AdminOtherExpensesPage() {
         id: `OE-${Date.now().toString(36).toUpperCase()}`,
         ...form,
         amount,
+        ownerId,
       };
       save([entry, ...expenses]);
     }
@@ -164,10 +168,12 @@ export default function AdminOtherExpensesPage() {
               className="mt-1"
             />
           </div>
-          <OwnerSelect
+          <SessionOwnerSelect
             owners={owners}
-            value={form.ownerId}
+            value={lockedOwnerId ?? form.ownerId}
             onChange={(ownerId) => setForm({ ...form, ownerId })}
+            lockedOwnerId={lockedOwnerId}
+            lockedOwnerName={lockedOwnerName}
             label="Paid by / recorded by"
             required
           />

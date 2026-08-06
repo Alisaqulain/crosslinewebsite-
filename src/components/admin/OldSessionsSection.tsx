@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { EntryActions } from "@/components/admin/EntryActions";
-import { OwnerSelect } from "@/components/admin/OwnerSelect";
+import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
+import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
@@ -81,6 +82,13 @@ export function OldSessionsSection() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<SessionForm>(() => emptyForm([]));
+  const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
+
+  useEffect(() => {
+    if (lockedOwnerId) {
+      setForm((f) => ({ ...f, receivedByOwnerId: lockedOwnerId }));
+    }
+  }, [lockedOwnerId]);
 
   useEffect(() => {
     fetchAdminStore().then(async ({ store: s }) => {
@@ -173,7 +181,12 @@ export function OldSessionsSection() {
       toast("Enter a valid udhari amount", "error");
       return;
     }
-    if (!form.receivedByOwnerId) {
+    const ownerId = defaultOwnerId(
+      lockedOwnerId,
+      form.receivedByOwnerId,
+      store?.owners ?? []
+    );
+    if (!ownerId) {
       toast("Select owner — required", "error");
       return;
     }
@@ -188,7 +201,7 @@ export function OldSessionsSection() {
       slotPrice: form.slotPrice,
       amountReceived: received,
       udhariAmount: udhari,
-      receivedByOwnerId: form.receivedByOwnerId || undefined,
+      receivedByOwnerId: ownerId,
       matchType: form.matchType,
       notes: form.notes.trim() || undefined,
       status: "completed",
@@ -334,10 +347,12 @@ export function OldSessionsSection() {
               </Select>
             </div>
             {store && (
-              <OwnerSelect
+              <SessionOwnerSelect
                 owners={store.owners ?? []}
-                value={form.receivedByOwnerId}
+                value={lockedOwnerId ?? form.receivedByOwnerId}
                 onChange={(receivedByOwnerId) => setForm({ ...form, receivedByOwnerId })}
+                lockedOwnerId={lockedOwnerId}
+                lockedOwnerName={lockedOwnerName}
                 label="Owner / who received *"
                 required
               />

@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
 import { Label } from "@/components/ui/Input";
-import { OwnerSelect } from "@/components/admin/OwnerSelect";
+import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
+import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin, patchBooking } from "@/lib/api-client";
 import { getOwnerName } from "@/lib/owners";
@@ -32,6 +33,11 @@ export default function AdminUdhariPage() {
   const [paymentOwnerId, setPaymentOwnerId] = useState("");
   const [amountInput, setAmountInput] = useState("");
   const [udhariInput, setUdhariInput] = useState("");
+  const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
+
+  useEffect(() => {
+    if (lockedOwnerId) setPaymentOwnerId(lockedOwnerId);
+  }, [lockedOwnerId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,12 +104,12 @@ export default function AdminUdhariPage() {
       toast("Enter a valid udhari amount", "error");
       return;
     }
-    if (!paymentOwnerId) {
+    const ownerId = defaultOwnerId(lockedOwnerId, paymentOwnerId, owners);
+    if (!ownerId) {
       toast("Select owner — required", "error");
       return;
     }
 
-    const ownerId = paymentOwnerId;
     setActionId(payTarget.data.id);
 
     try {
@@ -349,10 +355,12 @@ export default function AdminUdhariPage() {
               <AmountInput value={udhariInput} onChange={setUdhariInput} placeholder="0 if none" className="mt-1" />
               <p className="text-xs text-slate-500 mt-1">Manual only — not auto price minus received</p>
             </div>
-            <OwnerSelect
+            <SessionOwnerSelect
               owners={owners}
-              value={paymentOwnerId}
+              value={lockedOwnerId ?? paymentOwnerId}
               onChange={setPaymentOwnerId}
+              lockedOwnerId={lockedOwnerId}
+              lockedOwnerName={lockedOwnerName}
               label="Owner / who received *"
               required
             />

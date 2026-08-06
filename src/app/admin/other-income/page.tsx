@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { BallStockBar, BallStockTable } from "@/components/admin/BallStockBar";
-import { OwnerSelect } from "@/components/admin/OwnerSelect";
+import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
+import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -75,6 +76,7 @@ export default function AdminOtherIncomePage() {
   const [editingOtherId, setEditingOtherId] = useState<string | null>(null);
   const [ballForm, setBallForm] = useState(emptyBallForm);
   const [otherForm, setOtherForm] = useState(emptyOtherForm);
+  const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
   useEffect(() => {
     fetchAdminStore().then(({ store: s }) => {
@@ -122,7 +124,7 @@ export default function AdminOtherIncomePage() {
       toast("Enter price per ball", "error");
       return;
     }
-    if (!ballForm.ownerId && !owners[0]?.id) {
+    if (!(ballForm.ownerId || lockedOwnerId) && !owners[0]?.id) {
       toast("Select who received the money", "error");
       return;
     }
@@ -153,7 +155,7 @@ export default function AdminOtherIncomePage() {
       category: "Ball sale",
       shift: ballForm.shift,
       note: ballForm.note || undefined,
-      ownerId: ballForm.ownerId || owners[0]?.id || "",
+      ownerId: defaultOwnerId(lockedOwnerId, ballForm.ownerId, owners),
       ballQuality: ballForm.ballQuality,
       ballsSold: ballForm.ballsSold,
       pricePerBall,
@@ -174,7 +176,7 @@ export default function AdminOtherIncomePage() {
       toast("Description and amount are required", "error");
       return;
     }
-    if (!otherForm.ownerId && !owners[0]?.id) {
+    if (!(otherForm.ownerId || lockedOwnerId) && !owners[0]?.id) {
       toast("Select who received this income", "error");
       return;
     }
@@ -186,7 +188,7 @@ export default function AdminOtherIncomePage() {
       category: otherForm.category,
       shift: otherForm.shift,
       note: otherForm.note || undefined,
-      ownerId: otherForm.ownerId || owners[0]?.id || "",
+      ownerId: defaultOwnerId(lockedOwnerId, otherForm.ownerId, owners),
     };
 
     if (editingOtherId) {
@@ -342,10 +344,12 @@ export default function AdminOtherIncomePage() {
                 </p>
               )}
             </div>
-            <OwnerSelect
+            <SessionOwnerSelect
               owners={owners}
-              value={ballForm.ownerId}
+              value={lockedOwnerId ?? ballForm.ownerId}
               onChange={(ownerId) => setBallForm({ ...ballForm, ownerId })}
+              lockedOwnerId={lockedOwnerId}
+              lockedOwnerName={lockedOwnerName}
               label="Received by"
               required
             />
@@ -430,10 +434,12 @@ export default function AdminOtherIncomePage() {
                 className="mt-1"
               />
             </div>
-            <OwnerSelect
+            <SessionOwnerSelect
               owners={owners}
-              value={otherForm.ownerId}
+              value={lockedOwnerId ?? otherForm.ownerId}
               onChange={(ownerId) => setOtherForm({ ...otherForm, ownerId })}
+              lockedOwnerId={lockedOwnerId}
+              lockedOwnerName={lockedOwnerName}
               label="Received by"
               required
             />

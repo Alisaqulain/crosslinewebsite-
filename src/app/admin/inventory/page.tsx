@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { BallQualitySelect } from "@/components/admin/BallQualitySelect";
-import { OwnerSelect } from "@/components/admin/OwnerSelect";
+import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
+import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -52,6 +53,7 @@ export default function AdminInventoryPage() {
   const [purchaseForm, setPurchaseForm] = useState(emptyPurchase);
   const [pricePerBall, setPricePerBall] = useState(0);
   const [usageForm, setUsageForm] = useState(emptyUsage);
+  const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
   const load = () => {
     fetchAdminStore().then(({ store: s }) => {
@@ -115,11 +117,11 @@ export default function AdminInventoryPage() {
       toast("Enter price per ball", "error");
       return;
     }
-    if (!purchaseForm.ownerId && !owners[0]?.id) {
+    if (!(purchaseForm.ownerId || lockedOwnerId) && !owners[0]?.id) {
       toast("Select who paid for this purchase", "error");
       return;
     }
-    const ownerId = purchaseForm.ownerId || owners[0]?.id || "";
+    const ownerId = defaultOwnerId(lockedOwnerId, purchaseForm.ownerId, owners);
     const payload = { ...purchaseForm, quality, purchasePrice: totalCost, ownerId };
     if (editingPurchaseId) {
       const next = purchases.map((p) =>
@@ -394,10 +396,12 @@ export default function AdminInventoryPage() {
                 Where you bought the balls (optional).
               </p>
             </div>
-            <OwnerSelect
+            <SessionOwnerSelect
               owners={owners}
-              value={purchaseForm.ownerId}
+              value={lockedOwnerId ?? purchaseForm.ownerId}
               onChange={(ownerId) => setPurchaseForm({ ...purchaseForm, ownerId })}
+              lockedOwnerId={lockedOwnerId}
+              lockedOwnerName={lockedOwnerName}
               label="Paid by / recorded by *"
               required
             />

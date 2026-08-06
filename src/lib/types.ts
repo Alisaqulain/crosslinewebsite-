@@ -51,6 +51,19 @@ export interface StadiumOwner {
   name: string;
 }
 
+export type AdminUserRole = "main" | "co-owner";
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  /** Links to StadiumOwner.id — entries auto-use this owner */
+  ownerId: string;
+  role: AdminUserRole;
+  createdAt: string;
+  createdBy?: string;
+}
+
 export interface Booking {
   id: string;
   customerName: string;
@@ -251,6 +264,7 @@ export interface ContactMessage {
 
 export interface AppStore {
   owners: StadiumOwner[];
+  adminUsers?: AdminUser[];
   bookings: Booking[];
   slots: TimeSlot[];
   blockedDates: string[];

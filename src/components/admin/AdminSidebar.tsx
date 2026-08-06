@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Calendar,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { cn } from "@/lib/utils";
+import { clearClientAdminSession, getClientAdminSession } from "@/lib/admin-session-client";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -34,7 +36,7 @@ const links = [
   { href: "/admin/gallery", label: "Gallery", icon: Image },
   { href: "/admin/content", label: "Website Content", icon: FileText },
   { href: "/admin/tournaments", label: "Tournaments", icon: Medal },
-  { href: "/admin/owners", label: "Owners", icon: Users },
+  { href: "/admin/owners", label: "Owners & Logins", icon: Users, mainOnly: true },
 ];
 
 export function AdminSidebar({
@@ -45,6 +47,18 @@ export function AdminSidebar({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const [ownerName, setOwnerName] = useState("");
+  const [roleLabel, setRoleLabel] = useState("Admin");
+  const [isMain, setIsMain] = useState(true);
+
+  useEffect(() => {
+    const session = getClientAdminSession();
+    setOwnerName(session?.ownerName ?? "");
+    setRoleLabel(session?.isMain ? "Main Owner" : "Co-owner");
+    setIsMain(session?.isMain ?? true);
+  }, [pathname]);
+
+  const visibleLinks = links.filter((link) => isMain || !("mainOnly" in link && link.mainOnly));
 
   return (
     <aside
@@ -59,12 +73,17 @@ export function AdminSidebar({
       <div className="p-5 border-b border-white/8">
         <Logo light />
         <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--cricket-green-light)]">
-          Admin
+          {roleLabel}
         </p>
+        {ownerName && (
+          <p className="text-xs text-slate-400 mt-1 truncate" title={ownerName}>
+            {ownerName}
+          </p>
+        )}
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {links.map((link) => {
+        {visibleLinks.map((link) => {
           const active =
             pathname === link.href || (link.href !== "/admin" && pathname.startsWith(link.href));
           return (
@@ -95,9 +114,7 @@ export function AdminSidebar({
         <Link
           href="/admin/login"
           onClick={() => {
-            sessionStorage.removeItem("crossline_admin");
-            sessionStorage.removeItem("crossline_admin_token");
-            sessionStorage.removeItem("crossline_admin_user");
+            clearClientAdminSession();
             onNavigate?.();
           }}
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"

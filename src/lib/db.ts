@@ -25,6 +25,7 @@ function mergeStore(parsed: Partial<AppStore>): AppStore {
     tournaments: parsed.tournaments ?? defaultStore.tournaments,
     gallery: parsed.gallery ?? defaultStore.gallery,
     owners: parsed.owners ?? defaultStore.owners,
+    adminUsers: parsed.adminUsers ?? defaultStore.adminUsers,
     bookings: parsed.bookings ?? defaultStore.bookings,
     ballQualities: parsed.ballQualities ?? defaultStore.ballQualities,
     ballPurchases: parsed.ballPurchases ?? defaultStore.ballPurchases,

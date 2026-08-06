@@ -1,25 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readStore, updateStore } from "@/lib/db";
-import { isAdminRequest, unauthorized } from "@/lib/auth";
+import {
+  canPatchSection,
+  forbidden,
+  getAdminSession,
+  sanitizeStoreForClient,
+  unauthorized,
+} from "@/lib/auth";
 import { syncBallUsageFromOtherIncomes } from "@/lib/ball-stock";
 import { getFinanceSummary } from "@/lib/finance";
 import type { AppStore, OtherIncome } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
-  if (!isAdminRequest(req)) return unauthorized();
+  const session = await getAdminSession(req);
+  if (!session) return unauthorized();
   const store = await readStore();
+  const safeStore = sanitizeStoreForClient(store);
   const summary = req.nextUrl.searchParams.get("summary");
   if (summary === "finance") {
-    return NextResponse.json({ finance: getFinanceSummary(store) });
+    return NextResponse.json({ finance: getFinanceSummary(store), session });
   }
-  return NextResponse.json({ store, finance: getFinanceSummary(store) });
+  return NextResponse.json({
+    store: safeStore,
+    finance: getFinanceSummary(store),
+    session,
+  });
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!isAdminRequest(req)) return unauthorized();
+  const session = await getAdminSession(req);
+  if (!session) return unauthorized();
   try {
     const { section, data } = await req.json();
     if (!section) return NextResponse.json({ error: "Section required" }, { status: 400 });
+    if (!canPatchSection(session, section)) {
+      return forbidden("Your account cannot change this section");
+    }
 
     const store = await updateStore((s) => {
       const next = { ...s };
@@ -83,7 +99,11 @@ export async function PATCH(req: NextRequest) {
       return next;
     });
 
-    return NextResponse.json({ store, finance: getFinanceSummary(store) });
+    return NextResponse.json({
+      store: sanitizeStoreForClient(store),
+      finance: getFinanceSummary(store),
+      session,
+    });
   } catch (err) {
     console.error("Admin PATCH failed:", err);
     const message = err instanceof Error ? err.message : "Update failed";

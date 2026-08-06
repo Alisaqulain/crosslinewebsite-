@@ -4,6 +4,7 @@ import { stadiumInfo } from "./data";
 
 export const defaultStore: AppStore = {
   owners: [],
+  adminUsers: [],
   blockedDates: [],
   slots: [
     {

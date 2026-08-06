@@ -4,13 +4,22 @@ import { Menu, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AdminSidebar } from "./AdminSidebar";
+import { getClientAdminSession } from "@/lib/admin-session-client";
 
 export function AdminHeader({ title }: { title: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [username, setUsername] = useState("Admin");
+  const [displayName, setDisplayName] = useState("Admin");
+  const [roleLabel, setRoleLabel] = useState("");
 
   useEffect(() => {
-    setUsername(sessionStorage.getItem("crossline_admin_user") ?? "Admin");
+    const session = getClientAdminSession();
+    if (session?.ownerName) {
+      setDisplayName(session.ownerName);
+      setRoleLabel(session.isMain ? "Main owner" : session.username);
+    } else {
+      setDisplayName(sessionStorage.getItem("crossline_admin_user") ?? "Admin");
+      setRoleLabel("");
+    }
   }, []);
 
   return (
@@ -47,7 +56,10 @@ export function AdminHeader({ title }: { title: string }) {
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--navy)] text-white">
               <User className="h-4 w-4" />
             </span>
-            <span className="text-sm font-semibold text-[var(--navy)] capitalize">{username}</span>
+            <span className="text-sm font-semibold text-[var(--navy)] capitalize">{displayName}</span>
+            {roleLabel && (
+              <span className="text-[10px] text-slate-500 block leading-tight">{roleLabel}</span>
+            )}
           </div>
         </div>
       </header>

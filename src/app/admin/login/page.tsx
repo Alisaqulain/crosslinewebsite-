@@ -38,6 +38,10 @@ export default function AdminLoginPage() {
       sessionStorage.setItem("crossline_admin", "true");
       sessionStorage.setItem("crossline_admin_token", data.token);
       sessionStorage.setItem("crossline_admin_user", data.username);
+      sessionStorage.setItem("crossline_admin_owner_id", data.ownerId ?? "");
+      sessionStorage.setItem("crossline_admin_owner_name", data.ownerName ?? data.username);
+      sessionStorage.setItem("crossline_admin_role", data.role ?? "main");
+      sessionStorage.setItem("crossline_admin_user_id", data.userId ?? "");
       router.push("/admin");
     } catch {
       setError("Login failed. Please try again.");
@@ -86,7 +90,7 @@ export default function AdminLoginPage() {
           <div className="rounded-2xl border border-[var(--border)] bg-white p-8 shadow-[var(--shadow-lg)]">
             <div className="h-1 w-16 rounded-full bg-gradient-to-r from-[var(--brand-red)] to-[var(--cricket-green)] mb-6" />
             <h1 className="font-[family-name:var(--font-sora)] text-2xl font-bold text-[var(--navy)]">Sign In</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">Enter your admin credentials</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Owner or co-owner login</p>
 
             <form onSubmit={handleLogin} className="mt-8 space-y-5">
               <div>
@@ -96,7 +100,7 @@ export default function AdminLoginPage() {
                   name="username"
                   type="text"
                   autoComplete="username"
-                  placeholder="admincrossline"
+                  placeholder="Username"
                   className="mt-1.5"
                   required
                 />
