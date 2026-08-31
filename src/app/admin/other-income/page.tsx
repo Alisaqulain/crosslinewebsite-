@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { AdminCollapsibleForm } from "@/components/admin/AdminCollapsibleForm";
 import { BallStockBar, BallStockTable } from "@/components/admin/BallStockBar";
 import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
 import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
@@ -18,7 +19,7 @@ import { getOwnerName } from "@/lib/owners";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore, OtherIncome, ShiftCategory, StadiumOwner } from "@/lib/types";
-import { Loader2, Package, Save, TrendingUp } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 
 const OTHER_CATEGORIES = [
   "Sponsorship",
@@ -74,6 +75,8 @@ export default function AdminOtherIncomePage() {
   const [saving, setSaving] = useState(false);
   const [editingBallId, setEditingBallId] = useState<string | null>(null);
   const [editingOtherId, setEditingOtherId] = useState<string | null>(null);
+  const [showBallForm, setShowBallForm] = useState(false);
+  const [showOtherForm, setShowOtherForm] = useState(false);
   const [ballForm, setBallForm] = useState(emptyBallForm);
   const [otherForm, setOtherForm] = useState(emptyOtherForm);
   const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
@@ -164,8 +167,10 @@ export default function AdminOtherIncomePage() {
     if (editingBallId) {
       save(incomes.map((e) => (e.id === editingBallId ? { ...e, ...payload } : e)));
       setEditingBallId(null);
+      setShowBallForm(false);
     } else {
       save([{ id: `OI-${Date.now().toString(36).toUpperCase()}`, ...payload }, ...incomes]);
+      setShowBallForm(false);
     }
     setBallForm(emptyBallForm());
   };
@@ -194,13 +199,17 @@ export default function AdminOtherIncomePage() {
     if (editingOtherId) {
       save(incomes.map((e) => (e.id === editingOtherId ? { ...e, ...payload } : e)));
       setEditingOtherId(null);
+      setShowOtherForm(false);
     } else {
       save([{ id: `OI-${Date.now().toString(36).toUpperCase()}`, ...payload }, ...incomes]);
+      setShowOtherForm(false);
     }
     setOtherForm(emptyOtherForm());
   };
 
   const startEditBall = (e: OtherIncome) => {
+    setShowBallForm(true);
+    setShowOtherForm(false);
     setEditingBallId(e.id);
     setEditingOtherId(null);
     setBallForm({
@@ -216,6 +225,8 @@ export default function AdminOtherIncomePage() {
   };
 
   const startEditOther = (e: OtherIncome) => {
+    setShowOtherForm(true);
+    setShowBallForm(false);
     setEditingOtherId(e.id);
     setEditingBallId(null);
     setOtherForm({
@@ -248,7 +259,7 @@ export default function AdminOtherIncomePage() {
 
   if (loading) {
     return (
-      <AdminShell title="Income">
+      <AdminShell title="Other income">
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-[#F7931E]" />
         </div>
@@ -257,29 +268,29 @@ export default function AdminOtherIncomePage() {
   }
 
   return (
-    <AdminShell title="Income">
-      <div className="grid lg:grid-cols-2 gap-8 mb-8">
-        {/* —— Ball sale —— */}
-        <Card>
-          <h3 className="font-semibold text-[var(--navy)] mb-2 flex items-center gap-2">
-            <Package className="h-5 w-5 text-[#F7931E]" />
-            {editingBallId ? "Edit ball sale" : "Sell ball"}
-          </h3>
-          <p className="text-xs text-slate-500 mb-4">
-            Stock is reduced automatically when you save a sale.
-          </p>
+    <AdminShell title="Other income">
+      <p className="admin-page-intro">
+        Record ball sales and any other income — sponsorship, drinks, rent, fees, etc.
+      </p>
 
+      <AdminCollapsibleForm
+        open={showBallForm || !!editingBallId}
+        onOpenChange={(open) => {
+          if (open) setShowOtherForm(false);
+          if (!open && !editingBallId) setShowBallForm(false);
+          else if (open) setShowBallForm(true);
+        }}
+        title="Sell ball"
+        addLabel="Sell ball"
+        editing={!!editingBallId}
+      >
           {store && (
-            <>
-              <p className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
-                Current stock
-              </p>
+            <div className="mb-4">
               <BallStockBar store={store} />
               <BallStockTable store={store} />
-            </>
+            </div>
           )}
-
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="admin-form-grid">
             <div>
               <Label>Date</Label>
               <Input
@@ -374,25 +385,27 @@ export default function AdminOtherIncomePage() {
                 onClick={() => {
                   setEditingBallId(null);
                   setBallForm(emptyBallForm());
+                  setShowBallForm(false);
                 }}
               >
                 Cancel
               </Button>
             )}
           </div>
-        </Card>
+      </AdminCollapsibleForm>
 
-        {/* —— Other income —— */}
-        <Card>
-          <h3 className="font-semibold text-[var(--navy)] mb-2 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            {editingOtherId ? "Edit other income" : "Other income"}
-          </h3>
-          <p className="text-xs text-slate-500 mb-4">
-            Any income source — sponsorship, drinks, rent, fees, etc. (Ball sales use the section above.)
-          </p>
-
-          <div className="grid sm:grid-cols-2 gap-3">
+      <AdminCollapsibleForm
+        open={showOtherForm || !!editingOtherId}
+        onOpenChange={(open) => {
+          if (open) setShowBallForm(false);
+          if (!open && !editingOtherId) setShowOtherForm(false);
+          else if (open) setShowOtherForm(true);
+        }}
+        title="Other income"
+        addLabel="Add other income"
+        editing={!!editingOtherId}
+      >
+          <div className="admin-form-grid">
             <div>
               <Label>Date</Label>
               <Input
@@ -463,16 +476,16 @@ export default function AdminOtherIncomePage() {
                 onClick={() => {
                   setEditingOtherId(null);
                   setOtherForm(emptyOtherForm());
+                  setShowOtherForm(false);
                 }}
               >
                 Cancel
               </Button>
             )}
           </div>
-        </Card>
-      </div>
+      </AdminCollapsibleForm>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-6 mt-2">
         <div>
           <p className="text-sm font-semibold text-[var(--navy)] mb-3">
             Ball sales · {formatCurrency(ballSales.reduce((s, e) => s + e.amount, 0))}

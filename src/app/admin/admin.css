@@ -1,5 +1,5 @@
 .admin-theme {
-  --admin-bg: #eef2f7;
+  --admin-bg: #f4f6f9;
   --admin-surface: #ffffff;
   --admin-border: rgba(10, 26, 58, 0.08);
   --admin-text: #0a1a3a;
@@ -12,14 +12,15 @@
 .admin-theme .admin-card {
   background: var(--admin-surface);
   border: 1px solid var(--admin-border);
-  border-radius: 1rem;
-  box-shadow: 0 4px 24px rgba(10, 26, 58, 0.06);
+  border-radius: 0.875rem;
+  box-shadow: 0 2px 12px rgba(10, 26, 58, 0.05);
   color: var(--admin-text);
 }
 
 .admin-theme .admin-subtle {
   background: #f8fafc;
   border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
 }
 
 .admin-theme .admin-heading {
@@ -31,12 +32,81 @@
   color: var(--admin-muted);
 }
 
+.admin-section-title {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.admin-page-intro {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--admin-muted);
+  margin-bottom: 1.25rem;
+  max-width: 42rem;
+}
+
+.admin-form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .admin-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-form-grid.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.admin-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+}
+
+.admin-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-quick-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--navy);
+  background: white;
+  border: 1px solid var(--admin-border);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-quick-link:hover {
+  background: #fff5f6;
+  border-color: rgba(227, 24, 55, 0.25);
+  color: var(--brand-red);
+}
+
 .admin-theme input,
 .admin-theme select,
 .admin-theme textarea {
   background: #fff !important;
   border-color: rgba(10, 26, 58, 0.12) !important;
   color: var(--admin-text) !important;
+  min-height: 44px;
 }
 
 .admin-theme input::placeholder,
@@ -46,6 +116,8 @@
 
 .admin-theme label {
   color: var(--admin-text) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
 }
 
 .admin-theme .admin-filter-active {
@@ -64,18 +136,18 @@
   color: var(--admin-text);
 }
 
-/* Legacy Card inside admin — force light surface */
 .admin-theme .rounded-2xl.border.bg-white,
 .admin-theme .rounded-2xl.border:not(.admin-sidebar *) {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border) !important;
   color: var(--admin-text) !important;
-  box-shadow: 0 4px 24px rgba(10, 26, 58, 0.06);
+  box-shadow: 0 2px 12px rgba(10, 26, 58, 0.05);
 }
 
 .admin-theme .rounded-2xl.border.p-6,
 .admin-theme .rounded-2xl.border.p-0,
-.admin-theme .rounded-2xl.border.p-4 {
+.admin-theme .rounded-2xl.border.p-4,
+.admin-theme .rounded-2xl.border.p-5 {
   background: var(--admin-surface) !important;
   border-color: var(--admin-border) !important;
 }

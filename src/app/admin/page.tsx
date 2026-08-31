@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { AdminQuickLinks } from "@/components/admin/AdminQuickLinks";
+import { AdminSectionTitle } from "@/components/admin/AdminSectionTitle";
 import { StatCard } from "@/components/admin/StatCard";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -10,11 +12,9 @@ import { Button } from "@/components/ui/Button";
 import { fetchAdminStore } from "@/lib/api-client";
 import { getFinanceSummary } from "@/lib/finance";
 import { getOwnerName } from "@/lib/owners";
-import { getQualityLabel } from "@/lib/qualities";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore } from "@/lib/types";
 import {
-  Calendar,
   IndianRupee,
   Loader2,
   ArrowRight,
@@ -94,6 +94,8 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminShell title="Dashboard">
+      <AdminQuickLinks />
+
       {pending > 0 && (
         <Card className="mb-6 !p-4 border-amber-300/60 bg-amber-50/80 flex flex-wrap items-center gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
@@ -106,9 +108,7 @@ export default function AdminDashboardPage() {
         </Card>
       )}
 
-      {/* Overall money */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Overall</h2>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-3">
         <StatCard
           label="Total income"
           value={formatCurrency(finance.totalIncome)}
@@ -126,53 +126,43 @@ export default function AdminDashboardPage() {
           value={formatCurrency(finance.netProfit)}
           icon={IndianRupee}
           color={finance.netProfit >= 0 ? "#1f8a3c" : "#e31837"}
-          trend={finance.netProfit >= 0 ? "In profit" : "In loss"}
+          trend={finance.netProfit >= 0 ? "All time" : "All time — in loss"}
         />
         <StatCard
-          label="Total udhari pending"
+          label="Udhari pending"
           value={formatCurrency(udhari.totalUdhari)}
           icon={IndianRupee}
           color="#e31837"
-          trend={udhari.countWithUdhari > 0 ? `${udhari.countWithUdhari} unpaid` : "All clear"}
+          trend={
+            udhari.countWithUdhari > 0
+              ? `${udhari.countWithUdhari} unpaid · Today ${todayBookings} matches`
+              : `All clear · Today ${todayBookings} matches`
+          }
         />
       </div>
-
-      {/* This month + bookings */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">This month</h2>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-        <StatCard
-          label="Month income"
-          value={formatCurrency(finance.thisMonth.income.total)}
-          icon={TrendingUp}
-          color="#1f8a3c"
-        />
-        <StatCard
-          label="Month expenses"
-          value={formatCurrency(finance.thisMonth.expense.total)}
-          icon={TrendingDown}
-          color="#e31837"
-        />
-        <StatCard
-          label="Month net"
-          value={formatCurrency(finance.thisMonth.netProfit)}
-          icon={IndianRupee}
-          color={finance.thisMonth.netProfit >= 0 ? "#1e3d73" : "#e31837"}
-        />
-        <StatCard
-          label="Today's matches"
-          value={todayBookings}
-          icon={Calendar}
-          color="#1e3d73"
-          trend={`${pending} pending · ${approved} approved`}
-        />
-      </div>
+      <p className="text-sm text-slate-600 mb-8 admin-page-intro">
+        This month: income {formatCurrency(finance.thisMonth.income.total)} · expenses{" "}
+        {formatCurrency(finance.thisMonth.expense.total)} · net{" "}
+        <span className={finance.thisMonth.netProfit >= 0 ? "text-green-700 font-semibold" : "text-red-600 font-semibold"}>
+          {formatCurrency(finance.thisMonth.netProfit)}
+        </span>
+        {pending > 0 || approved > 0 ? ` · ${pending} pending, ${approved} approved bookings` : ""}
+      </p>
 
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
         {/* Income breakdown */}
         <Card>
-          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] mb-4">
-            Income breakdown (all time)
-          </h2>
+          <AdminSectionTitle
+            action={
+              <Link href="/admin/finance">
+                <Button variant="ghost" size="sm">
+                  Full P&L <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            }
+          >
+            Income breakdown
+          </AdminSectionTitle>
           <div className="space-y-2">
             {[
               { label: "Online bookings (received)", amount: finance.allTimeOnlineIncome },
@@ -194,18 +184,11 @@ export default function AdminDashboardPage() {
               <span className="text-green-700">{formatCurrency(finance.totalIncome)}</span>
             </div>
           </div>
-          <Link href="/admin/finance" className="inline-block mt-4">
-            <Button variant="ghost" size="sm">
-              Full P&L <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
         </Card>
 
         {/* Expense breakdown */}
         <Card>
-          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] mb-4">
-            Expenses breakdown (all time)
-          </h2>
+          <AdminSectionTitle>Expenses breakdown</AdminSectionTitle>
           <div className="space-y-2">
             {[
               { label: "Diesel", amount: finance.dieselTotal },
@@ -235,14 +218,15 @@ export default function AdminDashboardPage() {
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
         {/* Udhari — who owes how much */}
         <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)]">
-              Udhari — who owes how much
-            </h2>
-            <Link href="/admin/udhari">
-              <Button variant="ghost" size="sm">View all</Button>
-            </Link>
-          </div>
+          <AdminSectionTitle
+            action={
+              <Link href="/admin/udhari">
+                <Button variant="ghost" size="sm">View all</Button>
+              </Link>
+            }
+          >
+            Udhari — who owes
+          </AdminSectionTitle>
           {udhari.accounts.length === 0 ? (
             <p className="text-sm text-slate-500 py-6 text-center">No pending udhari — all paid</p>
           ) : (
@@ -286,15 +270,18 @@ export default function AdminDashboardPage() {
 
         {/* Owner income */}
         <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] flex items-center gap-2">
+          <AdminSectionTitle
+            action={
+              <Link href="/admin/owners">
+                <Button variant="ghost" size="sm">Owners</Button>
+              </Link>
+            }
+          >
+            <span className="flex items-center gap-2">
               <Users className="h-5 w-5 text-[var(--cricket-green)]" />
               Income by owner
-            </h2>
-            <Link href="/admin/owners">
-              <Button variant="ghost" size="sm">Owners</Button>
-            </Link>
-          </div>
+            </span>
+          </AdminSectionTitle>
           {ownerStats.length === 0 ? (
             <p className="text-sm text-slate-500 py-6 text-center">No owner income recorded yet</p>
           ) : (
@@ -325,61 +312,39 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Ball purchases by owner */}
+      {/* Ball purchases by owner — summary only */}
       <Card className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)] flex items-center gap-2">
+        <AdminSectionTitle
+          action={
+            <Link href="/admin/inventory">
+              <Button variant="ghost" size="sm">Ball stock</Button>
+            </Link>
+          }
+        >
+          <span className="flex items-center gap-2">
             <Package className="h-5 w-5 text-[#F7931E]" />
             Ball purchases by owner
-          </h2>
-          <Link href="/admin/inventory">
-            <Button variant="ghost" size="sm">Ball Stock</Button>
-          </Link>
-        </div>
+          </span>
+        </AdminSectionTitle>
         {ballPurchasesByOwner.length === 0 ? (
           <p className="text-sm text-slate-500 py-6 text-center">No ball purchases recorded yet</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {ballPurchasesByOwner.map((group) => (
-              <div key={group.ownerId || "__none__"} className="rounded-xl admin-subtle overflow-hidden">
-                <div className="flex items-center justify-between p-3 bg-white/60 border-b border-[var(--border)]">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--navy)]">{group.ownerName}</p>
-                    <p className="text-[10px] text-slate-500">
-                      {group.purchases.length} purchase(s) · {group.totalBalls} balls
-                    </p>
-                  </div>
-                  <p className="text-sm font-bold text-red-600">{formatCurrency(group.total)}</p>
+              <div
+                key={group.ownerId || "__none__"}
+                className="admin-list-row admin-subtle text-sm"
+              >
+                <div>
+                  <p className="font-semibold text-[var(--navy)]">{group.ownerName}</p>
+                  <p className="text-xs text-slate-500">
+                    {group.purchases.length} purchase(s) · {group.totalBalls} balls
+                  </p>
                 </div>
-                <div className="divide-y divide-[var(--border)]">
-                  {group.purchases.map((p) => {
-                    const pricePerBall =
-                      p.quantity > 0 ? Math.round(p.purchasePrice / p.quantity) : 0;
-                    return (
-                      <div key={p.id} className="flex items-start justify-between gap-3 p-3 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[var(--navy)]">
-                            {getQualityLabel(store, p.quality)} × {p.quantity}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            {formatDate(p.date)}
-                            {p.supplier ? ` · ${p.supplier}` : ""}
-                            {p.notes ? ` · ${p.notes}` : ""}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-semibold text-red-600">{formatCurrency(p.purchasePrice)}</p>
-                          {pricePerBall > 0 && (
-                            <p className="text-[10px] text-slate-500">₹{pricePerBall}/ball</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <p className="font-bold text-red-600 shrink-0">{formatCurrency(group.total)}</p>
               </div>
             ))}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-red-50 border border-red-200 text-sm font-bold">
+            <div className="admin-list-row bg-red-50 border border-red-200 text-sm font-bold mt-2">
               <span className="text-red-900">All ball purchases</span>
               <span className="text-red-600">{formatCurrency(finance.ballPurchaseTotal)}</span>
             </div>
@@ -389,14 +354,15 @@ export default function AdminDashboardPage() {
 
       {/* Recent bookings */}
       <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-[var(--navy)] font-[family-name:var(--font-sora)]">
-            Recent bookings
-          </h2>
-          <Link href="/admin/bookings">
-            <Button variant="ghost" size="sm">All bookings</Button>
-          </Link>
-        </div>
+        <AdminSectionTitle
+          action={
+            <Link href="/admin/bookings">
+              <Button variant="ghost" size="sm">All bookings</Button>
+            </Link>
+          }
+        >
+          Recent bookings
+        </AdminSectionTitle>
         {recent.length === 0 ? (
           <p className="text-sm text-slate-500 py-4 text-center">No bookings yet</p>
         ) : (

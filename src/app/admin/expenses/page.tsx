@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { AdminCollapsibleForm } from "@/components/admin/AdminCollapsibleForm";
 import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
 import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
@@ -14,7 +15,7 @@ import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getOwnerName } from "@/lib/owners";
 import type { AppStore, OtherExpense, ShiftCategory, StadiumOwner } from "@/lib/types";
-import { Loader2, Plus, Receipt, Save } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 
 const CATEGORIES = [
   "Ground equipment",
@@ -43,6 +44,7 @@ export default function AdminOtherExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
@@ -86,6 +88,7 @@ export default function AdminOtherExpensesPage() {
       );
       save(next);
       setEditingId(null);
+      setShowForm(false);
     } else {
       const entry: OtherExpense = {
         id: `OE-${Date.now().toString(36).toUpperCase()}`,
@@ -94,11 +97,13 @@ export default function AdminOtherExpensesPage() {
         ownerId,
       };
       save([entry, ...expenses]);
+      setShowForm(false);
     }
     setForm(emptyForm());
   };
 
   const startEdit = (e: OtherExpense) => {
+    setShowForm(true);
     setEditingId(e.id);
     setForm({
       date: e.date,
@@ -129,18 +134,21 @@ export default function AdminOtherExpensesPage() {
   }
 
   return (
-    <AdminShell title="Other Ground Expenses">
-      <p className="text-sm text-slate-600 mb-6 max-w-2xl">
-        Record purchases for the ground that are not diesel or cricket balls — nets, markers,
-        chairs, repairs, water, etc. These appear in Profit &amp; Loss.
+    <AdminShell title="Expenses">
+      <p className="admin-page-intro">
+        Ground purchases that are not diesel or cricket balls — nets, repairs, water, etc.
       </p>
 
-      <Card className="mb-6">
-        <h3 className="font-semibold text-[var(--navy)] mb-4 flex items-center gap-2">
-          <Receipt className="h-5 w-5 text-[#F7931E]" />
-          {editingId ? "Edit expense" : "Add expense"}
-        </h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <AdminCollapsibleForm
+        open={showForm || !!editingId}
+        onOpenChange={(open) => {
+          if (!open && !editingId) setShowForm(false);
+        }}
+        title="Add expense"
+        addLabel="Add expense"
+        editing={!!editingId}
+      >
+        <div className="admin-form-grid cols-3">
           <div>
             <Label>Date</Label>
             <Input
@@ -211,19 +219,18 @@ export default function AdminOtherExpensesPage() {
               onClick={() => {
                 setEditingId(null);
                 setForm(emptyForm());
+                setShowForm(false);
               }}
             >
               Cancel edit
             </Button>
           )}
         </div>
-      </Card>
+      </AdminCollapsibleForm>
 
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm font-semibold text-[var(--navy)]">
-          Total recorded: {formatCurrency(total)}
-        </p>
-      </div>
+      <p className="text-sm font-semibold text-[var(--navy)] mb-4">
+        Total: {formatCurrency(total)}
+      </p>
 
       <Card className="p-0 md:p-6">
         <ResponsiveTable

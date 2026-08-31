@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
+import { AdminCollapsibleForm } from "@/components/admin/AdminCollapsibleForm";
 import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
 import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
@@ -16,7 +17,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { dieselAmount } from "@/lib/diesel";
 import { getOwnerName } from "@/lib/owners";
 import type { AppStore, DieselExpense, StadiumOwner } from "@/lib/types";
-import { Fuel, Loader2, Moon, Plus, Save } from "lucide-react";
+import { Loader2, Plus, Save } from "lucide-react";
 
 const emptyForm = () => ({
   date: new Date().toISOString().split("T")[0],
@@ -33,6 +34,7 @@ export default function AdminDieselPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
@@ -73,6 +75,7 @@ export default function AdminDieselPage() {
       );
       save(next);
       setEditingId(null);
+      setShowForm(false);
     } else {
       const entry: DieselExpense = {
         id: `DE-${Date.now().toString(36).toUpperCase()}`,
@@ -83,11 +86,13 @@ export default function AdminDieselPage() {
         ownerId,
       };
       save([entry, ...expenses]);
+      setShowForm(false);
     }
     setForm(emptyForm());
   };
 
   const startEdit = (e: DieselExpense) => {
+    setShowForm(true);
     setEditingId(e.id);
     setForm({
       date: e.date,
@@ -115,17 +120,19 @@ export default function AdminDieselPage() {
   }
 
   return (
-    <AdminShell title="Diesel Cost Entry">
-      <Card className="mb-6">
-        <h3 className="font-semibold text-[var(--navy)] mb-1 flex items-center gap-2">
-          <Fuel className="h-5 w-5 text-[#F7931E]" />
-          {editingId ? "Edit Diesel Expense" : "Add Diesel Expense"}
-        </h3>
-        <p className="text-xs text-slate-500 mb-4 flex items-center gap-1.5">
-          <Moon className="h-3.5 w-3.5" />
-          Night match only — diesel cost in rupees (₹)
-        </p>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <AdminShell title="Diesel">
+      <p className="admin-page-intro">Night match diesel costs. Enter amount in rupees (₹).</p>
+
+      <AdminCollapsibleForm
+        open={showForm || !!editingId}
+        onOpenChange={(open) => {
+          if (!open && !editingId) setShowForm(false);
+        }}
+        title="Add diesel entry"
+        addLabel="Add diesel entry"
+        editing={!!editingId}
+      >
+        <div className="admin-form-grid cols-3">
           <div>
             <Label>Date</Label>
             <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1" />
@@ -156,18 +163,18 @@ export default function AdminDieselPage() {
         <div className="flex gap-2 mt-4">
           <Button onClick={submitEntry} disabled={saving || !parseAmount(form.amount)}>
             {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            {editingId ? "Update Entry" : "Add Entry"}
+            {editingId ? "Update" : "Add entry"}
           </Button>
           {editingId && (
-            <Button variant="ghost" onClick={() => { setEditingId(null); setForm(emptyForm()); }}>
+            <Button variant="ghost" onClick={() => { setEditingId(null); setForm(emptyForm()); setShowForm(false); }}>
               Cancel
             </Button>
           )}
         </div>
-      </Card>
+      </AdminCollapsibleForm>
 
-      <p className="text-lg font-semibold text-[var(--navy)] mb-4">
-        Total Diesel Expense: {formatCurrency(total)}
+      <p className="text-sm font-semibold text-[var(--navy)] mb-4">
+        Total: {formatCurrency(total)}
       </p>
 
       <Card className="p-0 md:p-6">

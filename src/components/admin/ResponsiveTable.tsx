@@ -28,7 +28,7 @@ export function ResponsiveTable<T>({ columns, data, rowKey, emptyMessage = "No r
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)] bg-[var(--bg-alt)]/50">
               {columns.map((col) => (
-                <th key={col.key} className={cn("p-4 font-semibold text-xs uppercase tracking-wide", col.className)}>
+                <th key={col.key} className={cn("p-3 font-medium text-sm text-[var(--text-muted)]", col.className)}>
                   {col.header}
                 </th>
               ))}
@@ -41,7 +41,7 @@ export function ResponsiveTable<T>({ columns, data, rowKey, emptyMessage = "No r
                 className="border-b border-[var(--border)] hover:bg-[var(--bg-alt)]/60 transition-colors"
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={cn("p-4 text-[var(--navy)]", col.className)}>
+                  <td key={col.key} className={cn("p-3 text-[var(--navy)]", col.className)}>
                     {col.render(row)}
                   </td>
                 ))}

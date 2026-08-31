@@ -9,57 +9,51 @@ import { getClientAdminSession } from "@/lib/admin-session-client";
 export function AdminHeader({ title }: { title: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [displayName, setDisplayName] = useState("Admin");
-  const [roleLabel, setRoleLabel] = useState("");
 
   useEffect(() => {
     const session = getClientAdminSession();
-    if (session?.ownerName) {
-      setDisplayName(session.ownerName);
-      setRoleLabel(session.isMain ? "Main owner" : session.username);
-    } else {
-      setDisplayName(sessionStorage.getItem("crossline_admin_user") ?? "Admin");
-      setRoleLabel("");
-    }
+    setDisplayName(session?.ownerName ?? sessionStorage.getItem("crossline_admin_user") ?? "Admin");
   }, []);
 
   return (
     <>
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-[var(--navy-deep)]/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-72 h-full shadow-2xl">
+          <div
+            className="absolute inset-0 bg-[var(--navy-deep)]/50 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="relative w-64 h-full shadow-2xl">
             <AdminSidebar className="flex" onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-[var(--admin-border)] bg-white/90 backdrop-blur-xl px-4 lg:px-8 shadow-sm">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[var(--admin-border)] bg-white px-4 lg:px-6 shadow-sm">
         <button
           type="button"
-          className="lg:hidden p-2.5 rounded-xl text-[var(--navy)] hover:bg-[var(--bg-alt)]"
+          className="lg:hidden p-2 rounded-lg text-[var(--navy)] hover:bg-[var(--bg-alt)]"
           onClick={() => setMobileOpen(true)}
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
         </button>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--cricket-green)]">Admin Panel</p>
-          <h1 className="font-[family-name:var(--font-sora)] text-lg font-bold text-[var(--navy)] leading-tight">{title}</h1>
-        </div>
-        <div className="ml-auto flex items-center gap-3">
+        <h1 className="font-[family-name:var(--font-sora)] text-xl font-bold text-[var(--navy)] truncate">
+          {title}
+        </h1>
+        <div className="ml-auto flex items-center gap-2">
           <Link
             href="/"
-            className="hidden sm:inline text-sm font-medium text-[var(--text-muted)] hover:text-[var(--brand-red)] transition-colors"
+            className="hidden sm:inline text-sm text-[var(--text-muted)] hover:text-[var(--brand-red)]"
           >
-            View Site →
+            View site
           </Link>
           <div className="flex items-center gap-2 rounded-full bg-[var(--bg-alt)] pl-1 pr-3 py-1 border border-[var(--border)]">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--navy)] text-white">
               <User className="h-4 w-4" />
             </span>
-            <span className="text-sm font-semibold text-[var(--navy)] capitalize">{displayName}</span>
-            {roleLabel && (
-              <span className="text-[10px] text-slate-500 block leading-tight">{roleLabel}</span>
-            )}
+            <span className="text-sm font-medium text-[var(--navy)] max-w-[120px] truncate">
+              {displayName}
+            </span>
           </div>
         </div>
       </header>
@@ -71,9 +65,9 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
   return (
     <div className="admin-theme min-h-screen">
       <AdminSidebar />
-      <div className="lg:pl-72">
+      <div className="lg:pl-64">
         <AdminHeader title={title} />
-        <main className="p-4 sm:p-6 lg:p-8 max-w-[1600px]">{children}</main>
+        <main className="p-4 sm:p-5 lg:p-6 max-w-6xl mx-auto">{children}</main>
       </div>
     </div>
   );
