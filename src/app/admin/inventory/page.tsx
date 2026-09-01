@@ -464,7 +464,7 @@ export default function AdminInventoryPage() {
                 value={usageForm.quality}
                 onChange={(quality) => setUsageForm({ ...usageForm, quality })}
                 excludeUsageId={editingUsageId ?? undefined}
-                placeholder="e.g. Tonk, Match ball"
+                className="mt-1"
               />
             </div>
             <div>
