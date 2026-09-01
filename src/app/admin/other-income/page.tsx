@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { AdminCollapsibleForm } from "@/components/admin/AdminCollapsibleForm";
+import { BallQualitySelect } from "@/components/admin/BallQualitySelect";
 import { OldIncomeSection } from "@/components/admin/OldIncomeSection";
 import { BallStockBar, BallStockTable } from "@/components/admin/BallStockBar";
 import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
@@ -16,8 +17,8 @@ import { Input, Label, Select } from "@/components/ui/Input";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { getAvailableBalls } from "@/lib/ball-stock";
-import { getBallStock } from "@/lib/finance";
 import { getOwnerName } from "@/lib/owners";
+import { getQualityLabel } from "@/lib/qualities";
 import { useToast } from "@/components/ui/Toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { AppStore, OtherIncome, ShiftCategory, StadiumOwner } from "@/lib/types";
@@ -274,10 +275,6 @@ export default function AdminOtherIncomePage() {
     }
   };
 
-  const stockOptions = store
-    ? getBallStockOptions(store, editingBallId)
-    : [];
-
   if (loading) {
     return (
       <AdminShell title="Other income">
@@ -348,19 +345,16 @@ export default function AdminOtherIncomePage() {
               />
             </div>
             <div>
-              <Label>Ball type (from stock)</Label>
-              <Select
-                value={ballForm.ballQuality}
-                onChange={(e) => setBallForm({ ...ballForm, ballQuality: e.target.value })}
-                className="mt-1"
-              >
-                <option value="">— Select —</option>
-                {stockOptions.map((s) => (
-                  <option key={s.quality} value={s.quality}>
-                    {s.label} ({s.available} available)
-                  </option>
-                ))}
-              </Select>
+              {store && (
+                <BallQualitySelect
+                  store={store}
+                  value={ballForm.ballQuality}
+                  onChange={(ballQuality) => setBallForm({ ...ballForm, ballQuality })}
+                  excludeOtherIncomeId={editingBallId ?? undefined}
+                  label="Ball type (from stock)"
+                  className="mt-1"
+                />
+              )}
             </div>
             <div>
               <Label>Quantity sold</Label>
@@ -551,7 +545,7 @@ export default function AdminOtherIncomePage() {
                     <div>
                       <p className="font-medium text-[var(--navy)]">{e.title}</p>
                       <p className="text-xs text-amber-700">
-                        {e.ballsSold} × {e.ballQuality} @ {formatCurrency(ballPricePerUnit(e))} each
+                        {e.ballsSold} × {store ? getQualityLabel(store, e.ballQuality ?? "") : e.ballQuality} @ {formatCurrency(ballPricePerUnit(e))} each
                       </p>
                       {store && e.ownerId && (
                         <p className="text-xs text-green-700">
@@ -623,17 +617,4 @@ export default function AdminOtherIncomePage() {
       )}
     </AdminShell>
   );
-}
-
-function getBallStockOptions(store: AppStore, editingId: string | null) {
-  const editingQuality = editingId
-    ? store.otherIncomes?.find((i) => i.id === editingId)?.ballQuality
-    : undefined;
-  return getBallStock(store)
-    .map((s) => ({
-      quality: s.quality,
-      label: s.label,
-      available: getAvailableBalls(store, s.quality, undefined, undefined, editingId ?? undefined),
-    }))
-    .filter((s) => s.available > 0 || s.quality === editingQuality);
 }

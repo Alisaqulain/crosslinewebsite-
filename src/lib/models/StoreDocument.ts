@@ -15,6 +15,7 @@ const StoreSchema = new Schema<AppStore & { _id: string }>(
     ballUsage: { type: Schema.Types.Mixed, default: [] },
     matches: { type: Schema.Types.Mixed, default: [] },
     dieselExpenses: { type: Schema.Types.Mixed, default: [] },
+    oldDieselExpenses: { type: Schema.Types.Mixed, default: [] },
     savedMonthlyReports: { type: Schema.Types.Mixed, default: [] },
     otherExpenses: { type: Schema.Types.Mixed, default: [] },
     otherIncomes: { type: Schema.Types.Mixed, default: [] },

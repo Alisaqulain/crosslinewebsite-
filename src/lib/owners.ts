@@ -46,7 +46,10 @@ export function getOwnerFinanceStats(store: AppStore): OwnerFinanceStat[] {
     ].filter((i) => i.ownerId === owner.id);
     const otherIncome = otherIncomeRows.reduce((s, i) => s + i.amount, 0);
 
-    const dieselRows = store.dieselExpenses.filter((d) => d.ownerId === owner.id);
+    const dieselRows = [
+      ...store.dieselExpenses,
+      ...(store.oldDieselExpenses ?? []),
+    ].filter((d) => d.ownerId === owner.id);
     const dieselExpense = dieselRows.reduce((s, d) => s + dieselAmount(d), 0);
 
     const ballPurchaseRows = store.ballPurchases.filter((p) => p.ownerId === owner.id);

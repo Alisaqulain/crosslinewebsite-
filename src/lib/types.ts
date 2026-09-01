@@ -273,6 +273,8 @@ export interface AppStore {
   ballUsage: BallUsage[];
   matches: StadiumMatch[];
   dieselExpenses: DieselExpense[];
+  /** Historical diesel before regular tracking (backfill) */
+  oldDieselExpenses?: DieselExpense[];
   savedMonthlyReports: SavedMonthlyReport[];
   otherExpenses: OtherExpense[];
   otherIncomes: OtherIncome[];

@@ -23,6 +23,7 @@ import {
   TrendingDown,
   Users,
   Package,
+  Calendar,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -51,7 +52,6 @@ export default function AdminDashboardPage() {
 
   const today = new Date().toISOString().split("T")[0];
   const pending = store.bookings.filter((b) => b.status === "pending").length;
-  const approved = store.bookings.filter((b) => b.status === "approved").length;
   const todayBookings = store.bookings.filter((b) => b.date === today && b.status === "approved").length;
   const recent = [...store.bookings]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -122,31 +122,45 @@ export default function AdminDashboardPage() {
           color="#e31837"
         />
         <StatCard
+          label="Matches this month"
+          value={finance.thisMonthMatches}
+          icon={Calendar}
+          color="#1e3d73"
+          trend={`${finance.thisMonthBallsSold} balls sold`}
+        />
+        <StatCard
           label="Net profit"
           value={formatCurrency(finance.netProfit)}
           icon={IndianRupee}
           color={finance.netProfit >= 0 ? "#1f8a3c" : "#e31837"}
           trend={finance.netProfit >= 0 ? "All time" : "All time — in loss"}
         />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 mb-3 max-w-md">
         <StatCard
           label="Udhari pending"
           value={formatCurrency(udhari.totalUdhari)}
           icon={IndianRupee}
           color="#e31837"
-          trend={
-            udhari.countWithUdhari > 0
-              ? `${udhari.countWithUdhari} unpaid · Today ${todayBookings} matches`
-              : `All clear · Today ${todayBookings} matches`
-          }
+          trend={udhari.countWithUdhari > 0 ? `${udhari.countWithUdhari} unpaid` : "All clear"}
+        />
+        <StatCard
+          label="Balls sold this month"
+          value={finance.thisMonthBallsSold}
+          icon={Package}
+          color="#F7931E"
+          trend="From ball sales"
         />
       </div>
       <p className="text-sm text-slate-600 mb-8 admin-page-intro">
-        This month: income {formatCurrency(finance.thisMonth.income.total)} · expenses{" "}
+        This month: {finance.thisMonthMatches} matches · {finance.thisMonthBallsSold} balls sold ·
+        income {formatCurrency(finance.thisMonth.income.total)} · expenses{" "}
         {formatCurrency(finance.thisMonth.expense.total)} · net{" "}
         <span className={finance.thisMonth.netProfit >= 0 ? "text-green-700 font-semibold" : "text-red-600 font-semibold"}>
           {formatCurrency(finance.thisMonth.netProfit)}
         </span>
-        {pending > 0 || approved > 0 ? ` · ${pending} pending, ${approved} approved bookings` : ""}
+        {todayBookings > 0 ? ` · ${todayBookings} match(es) today` : ""}
+        {pending > 0 ? ` · ${pending} pending approval` : ""}
       </p>
 
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
@@ -195,6 +209,9 @@ export default function AdminDashboardPage() {
           <div className="space-y-2">
             {[
               { label: "Diesel", amount: finance.dieselTotal },
+              ...(finance.oldDieselTotal > 0
+                ? [{ label: "Old diesel (backfill)", amount: finance.oldDieselTotal }]
+                : []),
               { label: "Ball purchases", amount: finance.ballPurchaseTotal },
               { label: "Other expenses", amount: finance.otherExpenseTotal },
               ...(finance.oldExpenseTotal > 0

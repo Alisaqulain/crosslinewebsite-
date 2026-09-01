@@ -381,7 +381,6 @@ export default function AdminInventoryPage() {
                 value={purchaseForm.quality}
                 onChange={(quality) => setPurchaseForm({ ...purchaseForm, quality })}
                 className="mt-1"
-                placeholder="e.g. Tonk, Practice, Club red ball"
                 forPurchase
               />
             </div>

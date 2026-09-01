@@ -64,6 +64,7 @@ export const defaultStore: AppStore = {
   ballUsage: [],
   matches: [],
   dieselExpenses: [],
+  oldDieselExpenses: [],
   savedMonthlyReports: [],
   otherExpenses: [],
   otherIncomes: [],

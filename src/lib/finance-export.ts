@@ -208,6 +208,15 @@ function buildOwnerRows(store: AppStore, from: string, to: string): OwnerExportR
     row.expenseTotal += amt;
   }
 
+  for (const d of (store.oldDieselExpenses ?? []).filter((x) => inRange(x.date, from, to))) {
+    if (!d.ownerId) continue;
+    const row = byId.get(d.ownerId);
+    if (!row) continue;
+    const amt = dieselAmount(d);
+    row.dieselExpense += amt;
+    row.expenseTotal += amt;
+  }
+
   for (const o of (store.otherExpenses ?? []).filter((x) => inRange(x.date, from, to))) {
     if (!o.ownerId) continue;
     const row = byId.get(o.ownerId);
@@ -349,6 +358,18 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
       dateLabel: fmtDate(d.date),
       category: "Diesel",
       description: d.purpose || "Night match diesel",
+      amount: dieselAmount(d),
+      owner: getOwnerName(store, d.ownerId),
+    });
+  }
+
+  for (const d of store.oldDieselExpenses ?? []) {
+    if (!inRange(d.date, from, to)) continue;
+    expenseRows.push({
+      date: d.date,
+      dateLabel: fmtDate(d.date),
+      category: "Old diesel",
+      description: d.purpose || "Past diesel (backfill)",
       amount: dieselAmount(d),
       owner: getOwnerName(store, d.ownerId),
     });
