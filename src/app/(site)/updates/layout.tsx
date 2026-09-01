@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
+import { PageSeo } from "@/components/seo/PageSeo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Latest Updates",
@@ -9,5 +10,15 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default function UpdatesLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <PageSeo
+        breadcrumbs={[
+          { name: "Home", path: "/" },
+          { name: "Latest Updates", path: "/updates" },
+        ]}
+      />
+      {children}
+    </>
+  );
 }

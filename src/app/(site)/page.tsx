@@ -1,31 +1,14 @@
-"use client";
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
+import { HomePageClient } from "./HomePageClient";
 
-import { Hero } from "@/components/home/Hero";
-import { AboutPreview } from "@/components/home/previews/AboutPreview";
-import { FacilitiesPreview } from "@/components/home/previews/FacilitiesPreview";
-import { BookingCTA } from "@/components/home/previews/BookingCTA";
-import { AcademyPreview } from "@/components/home/previews/AcademyPreview";
-import { TournamentPreview } from "@/components/home/previews/TournamentPreview";
-import { GalleryPreview } from "@/components/home/previews/GalleryPreview";
-import { ContactCTA } from "@/components/home/previews/ContactCTA";
-import { usePublicData } from "@/hooks/usePublicData";
-import { PageLoader } from "@/components/ui/PageLoader";
+export const metadata: Metadata = pageMetadata({
+  title: "Cricket Ground Booking Muzaffarnagar",
+  description:
+    "Crossline Cricket Stadium & Sports Academy — book cricket ground slots online in Muzaffarnagar. Floodlit turf, practice nets, sports academy, and tournaments near NH 58, Sandhawali.",
+  path: "/",
+});
 
 export default function HomePage() {
-  const { data, loading } = usePublicData();
-
-  if (loading) return <PageLoader />;
-
-  return (
-    <>
-      <Hero />
-      <AboutPreview content={data.siteContent} />
-      <FacilitiesPreview />
-      <BookingCTA slots={data.slots} />
-      <AcademyPreview academy={data.academy} />
-      <TournamentPreview tournaments={data.tournaments} />
-      <GalleryPreview items={data.gallery} />
-      <ContactCTA />
-    </>
-  );
+  return <HomePageClient />;
 }

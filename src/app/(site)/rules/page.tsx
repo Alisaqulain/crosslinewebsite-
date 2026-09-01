@@ -4,7 +4,8 @@ import { PageHero } from "@/components/media/PageHero";
 import { MediaImage } from "@/components/media/MediaImage";
 import { Shield, Clock, Users, Ban, AlertTriangle, CheckCircle } from "lucide-react";
 import type { Metadata } from "next";
-import { pageMetadata } from "@/lib/seo";
+import { PageSeo } from "@/components/seo/PageSeo";
+import { faqJsonLd, pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Rules & Policies",
@@ -77,9 +78,21 @@ const policies = [
   },
 ];
 
+const ruleFaqs = policies.map((policy) => ({
+  question: `What are the ${policy.title} rules at Crossline Cricket Stadium?`,
+  answer: policy.items.join(" "),
+}));
+
 export default function RulesPage() {
   return (
     <div>
+      <PageSeo
+        breadcrumbs={[
+          { name: "Home", path: "/" },
+          { name: "Rules & Policies", path: "/rules" },
+        ]}
+        extra={faqJsonLd(ruleFaqs)}
+      />
       <PageHero
         badge="Policies"
         title="Rules & Policies"

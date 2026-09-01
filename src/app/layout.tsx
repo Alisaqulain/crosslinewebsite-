@@ -28,6 +28,11 @@ export const metadata: Metadata = {
   creator: siteConfig.name,
   publisher: siteConfig.name,
   category: "Sports",
+  appleWebApp: {
+    capable: true,
+    title: siteConfig.shortName,
+    statusBarStyle: "black-translucent",
+  },
   icons: {
     icon: [
       { url: siteConfig.logo, sizes: "32x32", type: "image/png" },
