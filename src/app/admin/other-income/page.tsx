@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { AdminCollapsibleForm } from "@/components/admin/AdminCollapsibleForm";
 import { BallQualitySelect } from "@/components/admin/BallQualitySelect";
-import { OldIncomeSection } from "@/components/admin/OldIncomeSection";
 import { BallStockBar, BallStockTable } from "@/components/admin/BallStockBar";
+import { EntryKindSelect, isOldEntryId, type EntryKind } from "@/components/admin/EntryKindSelect";
 import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
 import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
-import { Input, Label, Select } from "@/components/ui/Input";
+import { Input, Label } from "@/components/ui/Input";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { getAvailableBalls } from "@/lib/ball-stock";
@@ -38,6 +37,8 @@ const OTHER_CATEGORIES = [
   "Other",
 ];
 
+type IncomeRow = OtherIncome & { entryKind: EntryKind };
+
 const emptyBallForm = () => ({
   date: new Date().toISOString().split("T")[0],
   title: "",
@@ -47,6 +48,17 @@ const emptyBallForm = () => ({
   ownerId: "",
   ballQuality: "",
   ballsSold: 0,
+});
+
+const emptyOtherForm = () => ({
+  date: new Date().toISOString().split("T")[0],
+  title: "",
+  amount: "" as string | number,
+  category: OTHER_CATEGORIES[0],
+  shift: "day" as ShiftCategory,
+  note: "",
+  ownerId: "",
+  entryKind: "current" as EntryKind,
 });
 
 function ballSaleTotal(pricePerBall: number, qty: number) {
@@ -59,25 +71,12 @@ function ballPricePerUnit(e: OtherIncome): number {
   return e.amount;
 }
 
-const emptyOtherForm = () => ({
-  date: new Date().toISOString().split("T")[0],
-  title: "",
-  amount: "" as string | number,
-  category: OTHER_CATEGORIES[0],
-  shift: "day" as ShiftCategory,
-  note: "",
-  ownerId: "",
-});
-
-type IncomeTab = "current" | "old-income";
-
 export default function AdminOtherIncomePage() {
-  const router = useRouter();
   const { toast } = useToast();
-  const [tab, setTab] = useState<IncomeTab>("current");
   const [store, setStore] = useState<AppStore | null>(null);
   const [owners, setOwners] = useState<StadiumOwner[]>([]);
-  const [incomes, setIncomes] = useState<OtherIncome[]>([]);
+  const [currentIncomes, setCurrentIncomes] = useState<OtherIncome[]>([]);
+  const [oldIncomes, setOldIncomes] = useState<OtherIncome[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingBallId, setEditingBallId] = useState<string | null>(null);
@@ -89,44 +88,34 @@ export default function AdminOtherIncomePage() {
   const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("tab") === "old-income") setTab("old-income");
-    }
-  }, []);
-
-  const switchTab = (next: IncomeTab) => {
-    setTab(next);
-    router.replace(
-      next === "old-income" ? "/admin/other-income?tab=old-income" : "/admin/other-income",
-      { scroll: false }
-    );
-  };
-
-  useEffect(() => {
     fetchAdminStore().then(({ store: s }) => {
       setStore(s);
       setOwners(s.owners ?? []);
-      setIncomes(s.otherIncomes ?? []);
+      setCurrentIncomes(s.otherIncomes ?? []);
+      setOldIncomes(s.oldIncomes ?? []);
       setLoading(false);
     });
   }, []);
 
-  const ballSales = useMemo(
-    () => incomes.filter((e) => e.category === "Ball sale"),
-    [incomes]
-  );
-  const otherIncomes = useMemo(
-    () => incomes.filter((e) => e.category !== "Ball sale"),
-    [incomes]
+  const allIncomes = useMemo<IncomeRow[]>(
+    () =>
+      [
+        ...currentIncomes.map((e) => ({ ...e, entryKind: "current" as const })),
+        ...oldIncomes.map((e) => ({ ...e, entryKind: "old" as const })),
+      ].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
+    [currentIncomes, oldIncomes]
   );
 
-  const save = async (data: OtherIncome[]) => {
+  const total = allIncomes.reduce((s, e) => s + e.amount, 0);
+
+  const persist = async (current: OtherIncome[], old: OtherIncome[]) => {
     setSaving(true);
     try {
-      const { store: updated } = await patchAdmin("otherIncomes", data);
-      setStore(updated);
-      setIncomes(updated.otherIncomes ?? data);
+      const { store: afterCurrent } = await patchAdmin("otherIncomes", current);
+      const { store: updated } = await patchAdmin("oldIncomes", old);
+      setStore(updated ?? afterCurrent);
+      setCurrentIncomes(updated?.otherIncomes ?? afterCurrent.otherIncomes ?? current);
+      setOldIncomes(updated?.oldIncomes ?? old);
       toast("Saved", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Save failed", "error");
@@ -171,12 +160,11 @@ export default function AdminOtherIncomePage() {
       ballForm.title.trim() ||
       `Sold ${ballForm.ballsSold} × ${ballForm.ballQuality}`;
 
-    const totalAmount = ballSaleTotal(pricePerBall, ballForm.ballsSold);
-
-    const payload: Omit<OtherIncome, "id"> = {
+    const row: OtherIncome = {
+      id: editingBallId ?? `OI-${Date.now().toString(36).toUpperCase()}`,
       date: ballForm.date,
       title,
-      amount: totalAmount,
+      amount: ballSaleTotal(pricePerBall, ballForm.ballsSold),
       category: "Ball sale",
       shift: ballForm.shift,
       note: ballForm.note || undefined,
@@ -186,14 +174,13 @@ export default function AdminOtherIncomePage() {
       pricePerBall,
     };
 
-    if (editingBallId) {
-      save(incomes.map((e) => (e.id === editingBallId ? { ...e, ...payload } : e)));
-      setEditingBallId(null);
-      setShowBallForm(false);
-    } else {
-      save([{ id: `OI-${Date.now().toString(36).toUpperCase()}`, ...payload }, ...incomes]);
-      setShowBallForm(false);
-    }
+    const next = editingBallId
+      ? currentIncomes.map((e) => (e.id === editingBallId ? row : e))
+      : [row, ...currentIncomes];
+
+    persist(next, oldIncomes);
+    setEditingBallId(null);
+    setShowBallForm(false);
     setBallForm(emptyBallForm());
   };
 
@@ -208,7 +195,10 @@ export default function AdminOtherIncomePage() {
       return;
     }
 
-    const payload: Omit<OtherIncome, "id"> = {
+    const row: OtherIncome = {
+      id:
+        editingOtherId ??
+        `${otherForm.entryKind === "old" ? "OLD-I" : "OI"}-${Date.now().toString(36).toUpperCase()}`,
       date: otherForm.date,
       title: otherForm.title.trim(),
       amount,
@@ -218,18 +208,25 @@ export default function AdminOtherIncomePage() {
       ownerId: defaultOwnerId(lockedOwnerId, otherForm.ownerId, owners),
     };
 
+    let nextCurrent = [...currentIncomes];
+    let nextOld = [...oldIncomes];
+
     if (editingOtherId) {
-      save(incomes.map((e) => (e.id === editingOtherId ? { ...e, ...payload } : e)));
-      setEditingOtherId(null);
-      setShowOtherForm(false);
-    } else {
-      save([{ id: `OI-${Date.now().toString(36).toUpperCase()}`, ...payload }, ...incomes]);
-      setShowOtherForm(false);
+      if (isOldEntryId(editingOtherId)) nextOld = nextOld.filter((e) => e.id !== editingOtherId);
+      else nextCurrent = nextCurrent.filter((e) => e.id !== editingOtherId);
     }
+
+    if (otherForm.entryKind === "old") nextOld = [row, ...nextOld];
+    else nextCurrent = [row, ...nextCurrent];
+
+    persist(nextCurrent, nextOld);
+    setEditingOtherId(null);
+    setShowOtherForm(false);
     setOtherForm(emptyOtherForm());
   };
 
-  const startEditBall = (e: OtherIncome) => {
+  const startEditBall = (e: IncomeRow) => {
+    if (e.entryKind === "old" || e.category !== "Ball sale") return;
     setShowBallForm(true);
     setShowOtherForm(false);
     setEditingBallId(e.id);
@@ -246,7 +243,11 @@ export default function AdminOtherIncomePage() {
     });
   };
 
-  const startEditOther = (e: OtherIncome) => {
+  const startEditOther = (e: IncomeRow) => {
+    if (e.category === "Ball sale") {
+      startEditBall(e);
+      return;
+    }
     setShowOtherForm(true);
     setShowBallForm(false);
     setEditingOtherId(e.id);
@@ -259,17 +260,25 @@ export default function AdminOtherIncomePage() {
       shift: e.shift,
       note: e.note ?? "",
       ownerId: e.ownerId ?? "",
+      entryKind: e.entryKind,
     });
   };
 
-  const deleteEntry = (id: string) => {
+  const deleteEntry = (e: IncomeRow) => {
     if (!confirm("Delete this entry?")) return;
-    save(incomes.filter((x) => x.id !== id));
-    if (editingBallId === id) {
+    if (e.entryKind === "old") {
+      persist(currentIncomes, oldIncomes.filter((x) => x.id !== e.id));
+    } else {
+      persist(
+        currentIncomes.filter((x) => x.id !== e.id),
+        oldIncomes
+      );
+    }
+    if (editingBallId === e.id) {
       setEditingBallId(null);
       setBallForm(emptyBallForm());
     }
-    if (editingOtherId === id) {
+    if (editingOtherId === e.id) {
       setEditingOtherId(null);
       setOtherForm(emptyOtherForm());
     }
@@ -287,334 +296,262 @@ export default function AdminOtherIncomePage() {
 
   return (
     <AdminShell title="Other income">
-      <div className="flex flex-wrap gap-2 mb-6">
-        {(
-          [
-            { id: "current" as const, label: "Current income" },
-            { id: "old-income" as const, label: "Old income" },
-          ] as const
-        ).map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => switchTab(t.id)}
-            className={`px-5 py-2.5 rounded-full text-sm font-semibold min-h-[44px] transition-colors ${
-              tab === t.id
-                ? "admin-filter-active bg-[var(--brand-red)]/10 text-[var(--brand-red)] border border-[var(--brand-red)]/20"
-                : "admin-filter bg-white text-[var(--text-muted)] border border-[var(--border)] hover:text-[var(--navy)]"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "old-income" ? (
-        <OldIncomeSection />
-      ) : (
-        <>
       <p className="admin-page-intro">
-        Record ball sales and any other income — sponsorship, drinks, rent, fees, etc.
+        Ball sales and other income in one place. Use &quot;Old&quot; for income recorded before this
+        system (does not change ball stock).
       </p>
+
+      <Card className="!p-4 mb-6 max-w-sm">
+        <p className="text-xs text-slate-500">Total income</p>
+        <p className="text-xl font-bold text-green-700">{formatCurrency(total)}</p>
+        <p className="text-xs text-slate-500 mt-1">{allIncomes.length} entries</p>
+      </Card>
 
       <AdminCollapsibleForm
         open={showBallForm || !!editingBallId}
         onOpenChange={(open) => {
+          setShowBallForm(open);
           if (open) setShowOtherForm(false);
-          if (!open && !editingBallId) setShowBallForm(false);
-          else if (open) setShowBallForm(true);
         }}
         title="Sell ball"
         addLabel="Sell ball"
         editing={!!editingBallId}
       >
-          {store && (
-            <div className="mb-4">
-              <BallStockBar store={store} />
-              <BallStockTable store={store} />
-            </div>
-          )}
-          <div className="admin-form-grid">
-            <div>
-              <Label>Date</Label>
-              <Input
-                type="date"
-                value={ballForm.date}
-                onChange={(e) => setBallForm({ ...ballForm, date: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              {store && (
-                <BallQualitySelect
-                  store={store}
-                  value={ballForm.ballQuality}
-                  onChange={(ballQuality) => setBallForm({ ...ballForm, ballQuality })}
-                  excludeOtherIncomeId={editingBallId ?? undefined}
-                  label="Ball type (from stock)"
-                  className="mt-1"
-                />
-              )}
-            </div>
-            <div>
-              <Label>Quantity sold</Label>
-              <Input
-                type="number"
-                min={1}
-                max={
-                  store && ballForm.ballQuality
-                    ? getAvailableBalls(
-                        store,
-                        ballForm.ballQuality,
-                        undefined,
-                        undefined,
-                        editingBallId ?? undefined
-                      )
-                    : undefined
-                }
-                value={ballForm.ballsSold || ""}
-                onChange={(e) =>
-                  setBallForm({ ...ballForm, ballsSold: Number(e.target.value) || 0 })
-                }
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Price per ball (₹)</Label>
-              <AmountInput
-                value={ballForm.pricePerBall}
-                onChange={(pricePerBall) => setBallForm({ ...ballForm, pricePerBall })}
-                className="mt-1"
-              />
-              {ballForm.ballsSold > 0 && parseAmount(ballForm.pricePerBall) > 0 && (
-                <p className="text-xs text-green-700 mt-1 font-semibold">
-                  Total received:{" "}
-                  {formatCurrency(
-                    ballSaleTotal(parseAmount(ballForm.pricePerBall), ballForm.ballsSold)
-                  )}{" "}
-                  ({ballForm.ballsSold} × {formatCurrency(parseAmount(ballForm.pricePerBall))})
-                </p>
-              )}
-            </div>
-            <SessionOwnerSelect
-              owners={owners}
-              value={lockedOwnerId ?? ballForm.ownerId}
-              onChange={(ownerId) => setBallForm({ ...ballForm, ownerId })}
-              lockedOwnerId={lockedOwnerId}
-              lockedOwnerName={lockedOwnerName}
-              label="Received by"
-              required
-            />
-            <div className="sm:col-span-2">
-              <Label>Note (optional)</Label>
-              <Input
-                value={ballForm.note}
-                onChange={(e) => setBallForm({ ...ballForm, note: e.target.value })}
-                placeholder="e.g. Sold to local team"
-                className="mt-1"
-              />
-            </div>
+        {store && (
+          <div className="mb-4">
+            <BallStockBar store={store} />
+            <BallStockTable store={store} />
           </div>
-          <div className="flex gap-2 mt-4">
-            <Button onClick={submitBallSale} disabled={saving}>
-              <Save className="h-4 w-4" />
-              {editingBallId ? "Update sale" : "Save sale"}
-            </Button>
-            {editingBallId && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setEditingBallId(null);
-                  setBallForm(emptyBallForm());
-                  setShowBallForm(false);
-                }}
-              >
-                Cancel
-              </Button>
+        )}
+        <div className="admin-form-grid">
+          <div>
+            <Label>Date</Label>
+            <Input
+              type="date"
+              value={ballForm.date}
+              onChange={(e) => setBallForm({ ...ballForm, date: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            {store && (
+              <BallQualitySelect
+                store={store}
+                value={ballForm.ballQuality}
+                onChange={(ballQuality) => setBallForm({ ...ballForm, ballQuality })}
+                excludeOtherIncomeId={editingBallId ?? undefined}
+                label="Ball type (from stock)"
+                className="mt-1"
+              />
             )}
           </div>
+          <div>
+            <Label>Quantity sold</Label>
+            <Input
+              type="number"
+              min={1}
+              max={
+                store && ballForm.ballQuality
+                  ? getAvailableBalls(
+                      store,
+                      ballForm.ballQuality,
+                      undefined,
+                      undefined,
+                      editingBallId ?? undefined
+                    )
+                  : undefined
+              }
+              value={ballForm.ballsSold || ""}
+              onChange={(e) =>
+                setBallForm({ ...ballForm, ballsSold: Number(e.target.value) || 0 })
+              }
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label>Price per ball (₹)</Label>
+            <AmountInput
+              value={ballForm.pricePerBall}
+              onChange={(pricePerBall) => setBallForm({ ...ballForm, pricePerBall })}
+              className="mt-1"
+            />
+          </div>
+          <SessionOwnerSelect
+            owners={owners}
+            value={lockedOwnerId ?? ballForm.ownerId}
+            onChange={(ownerId) => setBallForm({ ...ballForm, ownerId })}
+            lockedOwnerId={lockedOwnerId}
+            lockedOwnerName={lockedOwnerName}
+            label="Received by"
+            required
+          />
+          <div className="sm:col-span-2">
+            <Label>Note (optional)</Label>
+            <Input
+              value={ballForm.note}
+              onChange={(e) => setBallForm({ ...ballForm, note: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <Button onClick={submitBallSale} disabled={saving}>
+            <Save className="h-4 w-4" />
+            {editingBallId ? "Update sale" : "Save sale"}
+          </Button>
+          {editingBallId && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setEditingBallId(null);
+                setBallForm(emptyBallForm());
+                setShowBallForm(false);
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
       </AdminCollapsibleForm>
 
       <AdminCollapsibleForm
         open={showOtherForm || !!editingOtherId}
         onOpenChange={(open) => {
+          setShowOtherForm(open);
           if (open) setShowBallForm(false);
-          if (!open && !editingOtherId) setShowOtherForm(false);
-          else if (open) setShowOtherForm(true);
         }}
         title="Other income"
         addLabel="Add other income"
         editing={!!editingOtherId}
       >
-          <div className="admin-form-grid">
-            <div>
-              <Label>Date</Label>
-              <Input
-                type="date"
-                value={otherForm.date}
-                onChange={(e) => setOtherForm({ ...otherForm, date: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Category</Label>
-              <Input
-                list="other-income-categories"
-                value={otherForm.category}
-                onChange={(e) => setOtherForm({ ...otherForm, category: e.target.value })}
-                placeholder="Pick or type any source"
-                className="mt-1"
-              />
-              <datalist id="other-income-categories">
-                {OTHER_CATEGORIES.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Description</Label>
-              <Input
-                value={otherForm.title}
-                onChange={(e) => setOtherForm({ ...otherForm, title: e.target.value })}
-                placeholder="e.g. Sponsor payment"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Amount (₹)</Label>
-              <AmountInput
-                value={otherForm.amount}
-                onChange={(amount) => setOtherForm({ ...otherForm, amount })}
-                className="mt-1"
-              />
-            </div>
-            <SessionOwnerSelect
-              owners={owners}
-              value={lockedOwnerId ?? otherForm.ownerId}
-              onChange={(ownerId) => setOtherForm({ ...otherForm, ownerId })}
-              lockedOwnerId={lockedOwnerId}
-              lockedOwnerName={lockedOwnerName}
-              label="Received by"
-              required
+        <div className="admin-form-grid">
+          <EntryKindSelect
+            value={otherForm.entryKind}
+            onChange={(entryKind) => setOtherForm({ ...otherForm, entryKind })}
+          />
+          <div>
+            <Label>Date</Label>
+            <Input
+              type="date"
+              value={otherForm.date}
+              onChange={(e) => setOtherForm({ ...otherForm, date: e.target.value })}
+              className="mt-1"
             />
-            <div className="sm:col-span-2">
-              <Label>Notes (optional)</Label>
-              <Input
-                value={otherForm.note}
-                onChange={(e) => setOtherForm({ ...otherForm, note: e.target.value })}
-                className="mt-1"
-              />
-            </div>
           </div>
-          <div className="flex gap-2 mt-4">
-            <Button onClick={submitOtherIncome} disabled={saving}>
-              <Save className="h-4 w-4" />
-              {editingOtherId ? "Update" : "Save"} income
+          <div>
+            <Label>Category</Label>
+            <Input
+              list="other-income-categories"
+              value={otherForm.category}
+              onChange={(e) => setOtherForm({ ...otherForm, category: e.target.value })}
+              placeholder="Pick or type any source"
+              className="mt-1"
+            />
+            <datalist id="other-income-categories">
+              {OTHER_CATEGORIES.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Description</Label>
+            <Input
+              value={otherForm.title}
+              onChange={(e) => setOtherForm({ ...otherForm, title: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label>Amount (₹)</Label>
+            <AmountInput
+              value={otherForm.amount}
+              onChange={(amount) => setOtherForm({ ...otherForm, amount })}
+              className="mt-1"
+            />
+          </div>
+          <SessionOwnerSelect
+            owners={owners}
+            value={lockedOwnerId ?? otherForm.ownerId}
+            onChange={(ownerId) => setOtherForm({ ...otherForm, ownerId })}
+            lockedOwnerId={lockedOwnerId}
+            lockedOwnerName={lockedOwnerName}
+            label="Received by"
+            required
+          />
+          <div className="sm:col-span-2">
+            <Label>Notes (optional)</Label>
+            <Input
+              value={otherForm.note}
+              onChange={(e) => setOtherForm({ ...otherForm, note: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <Button onClick={submitOtherIncome} disabled={saving || !parseAmount(otherForm.amount)}>
+            <Save className="h-4 w-4" />
+            {editingOtherId ? "Update" : "Save"} income
+          </Button>
+          {editingOtherId && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setEditingOtherId(null);
+                setOtherForm(emptyOtherForm());
+                setShowOtherForm(false);
+              }}
+            >
+              Cancel
             </Button>
-            {editingOtherId && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setEditingOtherId(null);
-                  setOtherForm(emptyOtherForm());
-                  setShowOtherForm(false);
-                }}
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
+          )}
+        </div>
       </AdminCollapsibleForm>
 
-      <div className="grid lg:grid-cols-2 gap-6 mt-2">
-        <div>
-          <p className="text-sm font-semibold text-[var(--navy)] mb-3">
-            Ball sales · {formatCurrency(ballSales.reduce((s, e) => s + e.amount, 0))}
-          </p>
-          <Card className="p-0 md:p-6">
-            <ResponsiveTable
-              data={ballSales}
-              rowKey={(e) => e.id}
-              emptyMessage="No ball sales yet"
-              columns={[
-                { key: "date", header: "Date", render: (e) => formatDate(e.date) },
-                {
-                  key: "title",
-                  header: "Sale",
-                  render: (e) => (
-                    <div>
-                      <p className="font-medium text-[var(--navy)]">{e.title}</p>
-                      <p className="text-xs text-amber-700">
-                        {e.ballsSold} × {store ? getQualityLabel(store, e.ballQuality ?? "") : e.ballQuality} @ {formatCurrency(ballPricePerUnit(e))} each
-                      </p>
-                      {store && e.ownerId && (
-                        <p className="text-xs text-green-700">
-                          {getOwnerName(store, e.ownerId)}
-                        </p>
-                      )}
-                    </div>
-                  ),
-                },
-                { key: "amount", header: "₹", render: (e) => formatCurrency(e.amount) },
-                {
-                  key: "actions",
-                  header: "",
-                  render: (e) => (
-                    <EntryActions
-                      onEdit={() => startEditBall(e)}
-                      onDelete={() => deleteEntry(e.id)}
-                    />
-                  ),
-                },
-              ]}
-            />
-          </Card>
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-[var(--navy)] mb-3">
-            Other income · {formatCurrency(otherIncomes.reduce((s, e) => s + e.amount, 0))}
-          </p>
-          <Card className="p-0 md:p-6">
-            <ResponsiveTable
-              data={otherIncomes}
-              rowKey={(e) => e.id}
-              emptyMessage="No other income yet"
-              columns={[
-                { key: "date", header: "Date", render: (e) => formatDate(e.date) },
-                {
-                  key: "title",
-                  header: "Description",
-                  render: (e) => (
-                    <div>
-                      <p className="font-medium text-[var(--navy)]">{e.title}</p>
-                      <p className="text-xs text-slate-500">{e.category}</p>
-                      {store && e.ownerId && (
-                        <p className="text-xs text-green-700">
-                          {getOwnerName(store, e.ownerId)}
-                        </p>
-                      )}
-                    </div>
-                  ),
-                },
-                { key: "amount", header: "₹", render: (e) => formatCurrency(e.amount) },
-                {
-                  key: "actions",
-                  header: "",
-                  render: (e) => (
-                    <EntryActions
-                      onEdit={() => startEditOther(e)}
-                      onDelete={() => deleteEntry(e.id)}
-                    />
-                  ),
-                },
-              ]}
-            />
-          </Card>
-        </div>
-      </div>
-        </>
-      )}
+      <Card className="p-0 md:p-6 mt-2">
+        <ResponsiveTable
+          data={allIncomes}
+          rowKey={(e) => e.id}
+          emptyMessage="No income entries yet"
+          columns={[
+            { key: "date", header: "Date", render: (e) => formatDate(e.date) },
+            {
+              key: "title",
+              header: "Description",
+              render: (e) => (
+                <div>
+                  <p className="font-medium text-[var(--navy)]">{e.title}</p>
+                  <p className="text-xs text-slate-500">
+                    {e.category === "Ball sale" ? "Ball sale" : e.category}
+                    {e.entryKind === "old" ? " · Old" : ""}
+                  </p>
+                  {e.category === "Ball sale" && e.ballsSold && (
+                    <p className="text-xs text-amber-700">
+                      {e.ballsSold} ×{" "}
+                      {store ? getQualityLabel(store, e.ballQuality ?? "") : e.ballQuality}
+                    </p>
+                  )}
+                  {store && e.ownerId && (
+                    <p className="text-xs text-green-700">{getOwnerName(store, e.ownerId)}</p>
+                  )}
+                </div>
+              ),
+            },
+            { key: "amount", header: "Amount", render: (e) => formatCurrency(e.amount) },
+            {
+              key: "actions",
+              header: "",
+              render: (e) => (
+                <EntryActions
+                  onEdit={() =>
+                    e.category === "Ball sale" ? startEditBall(e) : startEditOther(e)
+                  }
+                  onDelete={() => deleteEntry(e)}
+                />
+              ),
+            },
+          ]}
+        />
+      </Card>
     </AdminShell>
   );
 }

@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { AdminCollapsibleForm } from "@/components/admin/AdminCollapsibleForm";
-import { OldExpensesSection } from "@/components/admin/OldExpensesSection";
+import { EntryKindSelect, isOldEntryId, type EntryKind } from "@/components/admin/EntryKindSelect";
 import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
 import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
 import { EntryActions } from "@/components/admin/EntryActions";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select } from "@/components/ui/Input";
+import { AmountInput, parseAmount } from "@/components/ui/AmountInput";
 import { ResponsiveTable } from "@/components/admin/ResponsiveTable";
 import { fetchAdminStore, patchAdmin } from "@/lib/api-client";
 import { useToast } from "@/components/ui/Toast";
@@ -28,25 +28,25 @@ const CATEGORIES = [
   "Other",
 ];
 
+type ExpenseRow = OtherExpense & { entryKind: EntryKind };
+
 const emptyForm = () => ({
   date: new Date().toISOString().split("T")[0],
   title: "",
-  amount: 0,
+  amount: "" as string | number,
   category: CATEGORIES[0],
   shift: "day" as ShiftCategory,
   note: "",
   ownerId: "",
+  entryKind: "current" as EntryKind,
 });
 
-type ExpensesTab = "current" | "old-expenses";
-
 export default function AdminOtherExpensesPage() {
-  const router = useRouter();
   const { toast } = useToast();
-  const [tab, setTab] = useState<ExpensesTab>("current");
   const [store, setStore] = useState<AppStore | null>(null);
   const [owners, setOwners] = useState<StadiumOwner[]>([]);
-  const [expenses, setExpenses] = useState<OtherExpense[]>([]);
+  const [currentExpenses, setCurrentExpenses] = useState<OtherExpense[]>([]);
+  const [oldExpenses, setOldExpenses] = useState<OtherExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -55,34 +55,34 @@ export default function AdminOtherExpensesPage() {
   const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("tab") === "old-expenses") setTab("old-expenses");
-    }
-  }, []);
-
-  const switchTab = (next: ExpensesTab) => {
-    setTab(next);
-    router.replace(next === "old-expenses" ? "/admin/expenses?tab=old-expenses" : "/admin/expenses", {
-      scroll: false,
-    });
-  };
-
-  useEffect(() => {
     fetchAdminStore().then(({ store: s }) => {
       setStore(s);
       setOwners(s.owners ?? []);
-      setExpenses(s.otherExpenses ?? []);
+      setCurrentExpenses(s.otherExpenses ?? []);
+      setOldExpenses(s.oldExpenses ?? []);
       setLoading(false);
     });
   }, []);
 
-  const save = async (data: OtherExpense[]) => {
+  const allExpenses = useMemo<ExpenseRow[]>(
+    () =>
+      [
+        ...currentExpenses.map((e) => ({ ...e, entryKind: "current" as const })),
+        ...oldExpenses.map((e) => ({ ...e, entryKind: "old" as const })),
+      ].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)),
+    [currentExpenses, oldExpenses]
+  );
+
+  const total = allExpenses.reduce((s, e) => s + e.amount, 0);
+
+  const persist = async (current: OtherExpense[], old: OtherExpense[]) => {
     setSaving(true);
     try {
-      const { store: updated } = await patchAdmin("otherExpenses", data);
+      await patchAdmin("otherExpenses", current);
+      const { store: updated } = await patchAdmin("oldExpenses", old);
       setStore(updated);
-      setExpenses(updated.otherExpenses ?? data);
+      setCurrentExpenses(updated.otherExpenses ?? current);
+      setOldExpenses(updated.oldExpenses ?? old);
       toast("Saved", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Save failed", "error");
@@ -92,9 +92,9 @@ export default function AdminOtherExpensesPage() {
   };
 
   const submitEntry = () => {
-    const amount = Number(form.amount);
+    const amount = parseAmount(form.amount);
     if (!form.title.trim() || !amount || amount <= 0) {
-      toast("Title and a valid amount are required", "error");
+      toast("Description and amount are required", "error");
       return;
     }
     if (!(lockedOwnerId || form.ownerId)) {
@@ -102,27 +102,36 @@ export default function AdminOtherExpensesPage() {
       return;
     }
     const ownerId = defaultOwnerId(lockedOwnerId, form.ownerId, owners);
+    const row: OtherExpense = {
+      id: editingId ?? `${form.entryKind === "old" ? "OLD-E" : "OE"}-${Date.now().toString(36).toUpperCase()}`,
+      date: form.date,
+      title: form.title.trim(),
+      amount,
+      category: form.category,
+      shift: form.shift,
+      note: form.note.trim() || undefined,
+      ownerId,
+    };
+
+    let nextCurrent = [...currentExpenses];
+    let nextOld = [...oldExpenses];
+
     if (editingId) {
-      const next = expenses.map((e) =>
-        e.id === editingId ? { ...e, ...form, amount, ownerId } : e
-      );
-      save(next);
-      setEditingId(null);
-      setShowForm(false);
-    } else {
-      const entry: OtherExpense = {
-        id: `OE-${Date.now().toString(36).toUpperCase()}`,
-        ...form,
-        amount,
-        ownerId,
-      };
-      save([entry, ...expenses]);
-      setShowForm(false);
+      const wasOld = isOldEntryId(editingId);
+      if (wasOld) nextOld = nextOld.filter((e) => e.id !== editingId);
+      else nextCurrent = nextCurrent.filter((e) => e.id !== editingId);
     }
+
+    if (form.entryKind === "old") nextOld = [row, ...nextOld];
+    else nextCurrent = [row, ...nextCurrent];
+
+    persist(nextCurrent, nextOld);
+    setEditingId(null);
+    setShowForm(false);
     setForm(emptyForm());
   };
 
-  const startEdit = (e: OtherExpense) => {
+  const startEdit = (e: ExpenseRow) => {
     setShowForm(true);
     setEditingId(e.id);
     setForm({
@@ -133,19 +142,25 @@ export default function AdminOtherExpensesPage() {
       shift: e.shift,
       note: e.note ?? "",
       ownerId: e.ownerId ?? "",
+      entryKind: e.entryKind,
     });
   };
 
-  const deleteEntry = (id: string) => {
+  const deleteEntry = (e: ExpenseRow) => {
     if (!confirm("Delete this expense?")) return;
-    save(expenses.filter((x) => x.id !== id));
+    if (e.entryKind === "old") {
+      persist(currentExpenses, oldExpenses.filter((x) => x.id !== e.id));
+    } else {
+      persist(
+        currentExpenses.filter((x) => x.id !== e.id),
+        oldExpenses
+      );
+    }
   };
-
-  const total = expenses.reduce((s, e) => s + e.amount, 0);
 
   if (loading) {
     return (
-      <AdminShell title="Other Expenses">
+      <AdminShell title="Expenses">
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-[#F7931E]" />
         </div>
@@ -155,46 +170,29 @@ export default function AdminOtherExpensesPage() {
 
   return (
     <AdminShell title="Expenses">
-      <div className="flex flex-wrap gap-2 mb-6">
-        {(
-          [
-            { id: "current" as const, label: "Current expenses" },
-            { id: "old-expenses" as const, label: "Old expenses" },
-          ] as const
-        ).map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => switchTab(t.id)}
-            className={`px-5 py-2.5 rounded-full text-sm font-semibold min-h-[44px] transition-colors ${
-              tab === t.id
-                ? "admin-filter-active bg-[var(--brand-red)]/10 text-[var(--brand-red)] border border-[var(--brand-red)]/20"
-                : "admin-filter bg-white text-[var(--text-muted)] border border-[var(--border)] hover:text-[var(--navy)]"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "old-expenses" ? (
-        <OldExpensesSection />
-      ) : (
-        <>
       <p className="admin-page-intro">
-        Ground purchases that are not diesel or cricket balls — nets, repairs, water, etc.
+        Ground purchases (not diesel or balls). Use &quot;Old&quot; for past expenses before you started
+        tracking here.
       </p>
+
+      <Card className="!p-4 mb-6 max-w-sm">
+        <p className="text-xs text-slate-500">Total expenses</p>
+        <p className="text-xl font-bold text-red-600">{formatCurrency(total)}</p>
+        <p className="text-xs text-slate-500 mt-1">{allExpenses.length} entries</p>
+      </Card>
 
       <AdminCollapsibleForm
         open={showForm || !!editingId}
-        onOpenChange={(open) => {
-          if (!open && !editingId) setShowForm(false);
-        }}
+        onOpenChange={setShowForm}
         title="Add expense"
         addLabel="Add expense"
         editing={!!editingId}
       >
         <div className="admin-form-grid cols-3">
+          <EntryKindSelect
+            value={form.entryKind}
+            onChange={(entryKind) => setForm({ ...form, entryKind })}
+          />
           <div>
             <Label>Date</Label>
             <Input
@@ -204,7 +202,7 @@ export default function AdminOtherExpensesPage() {
               className="mt-1"
             />
           </div>
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 lg:col-span-2">
             <Label>What did you buy / pay for?</Label>
             <Input
               value={form.title}
@@ -215,10 +213,9 @@ export default function AdminOtherExpensesPage() {
           </div>
           <div>
             <Label>Amount (₹)</Label>
-            <Input
-              type="number"
-              value={form.amount || ""}
-              onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+            <AmountInput
+              value={form.amount}
+              onChange={(amount) => setForm({ ...form, amount })}
               className="mt-1"
             />
           </div>
@@ -255,7 +252,7 @@ export default function AdminOtherExpensesPage() {
           </div>
         </div>
         <div className="flex gap-2 mt-4">
-          <Button onClick={submitEntry} disabled={saving}>
+          <Button onClick={submitEntry} disabled={saving || !parseAmount(form.amount)}>
             <Save className="h-4 w-4" />
             {editingId ? "Update" : "Save"} expense
           </Button>
@@ -274,27 +271,22 @@ export default function AdminOtherExpensesPage() {
         </div>
       </AdminCollapsibleForm>
 
-      <p className="text-sm font-semibold text-[var(--navy)] mb-4">
-        Total: {formatCurrency(total)}
-      </p>
-
       <Card className="p-0 md:p-6">
         <ResponsiveTable
-          data={expenses}
+          data={allExpenses}
           rowKey={(e) => e.id}
-          emptyMessage="No other expenses yet"
+          emptyMessage="No expenses yet"
           columns={[
-            {
-              key: "date",
-              header: "Date",
-              render: (e) => formatDate(e.date),
-            },
+            { key: "date", header: "Date", render: (e) => formatDate(e.date) },
             {
               key: "title",
               header: "Description",
               render: (e) => (
                 <div>
                   <p className="font-medium text-[var(--navy)]">{e.title}</p>
+                  {e.entryKind === "old" && (
+                    <span className="text-[10px] font-semibold uppercase text-amber-700">Old</span>
+                  )}
                   {store && e.ownerId && (
                     <p className="text-xs text-red-700">By {getOwnerName(store, e.ownerId)}</p>
                   )}
@@ -302,28 +294,18 @@ export default function AdminOtherExpensesPage() {
                 </div>
               ),
             },
-            {
-              key: "category",
-              header: "Category",
-              render: (e) => e.category,
-            },
-            {
-              key: "amount",
-              header: "Amount",
-              render: (e) => formatCurrency(e.amount),
-            },
+            { key: "category", header: "Category", render: (e) => e.category },
+            { key: "amount", header: "Amount", render: (e) => formatCurrency(e.amount) },
             {
               key: "actions",
               header: "",
               render: (e) => (
-                <EntryActions onEdit={() => startEdit(e)} onDelete={() => deleteEntry(e.id)} />
+                <EntryActions onEdit={() => startEdit(e)} onDelete={() => deleteEntry(e)} />
               ),
             },
           ]}
         />
       </Card>
-        </>
-      )}
     </AdminShell>
   );
 }
