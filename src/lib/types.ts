@@ -276,6 +276,10 @@ export interface AppStore {
   savedMonthlyReports: SavedMonthlyReport[];
   otherExpenses: OtherExpense[];
   otherIncomes: OtherIncome[];
+  /** Historical expenses before regular tracking (backfill) */
+  oldExpenses?: OtherExpense[];
+  /** Historical income before regular tracking (backfill) */
+  oldIncomes?: OtherIncome[];
   financeEntries: FinanceEntry[];
   gallery: GalleryItem[];
   siteContent: SiteContent;

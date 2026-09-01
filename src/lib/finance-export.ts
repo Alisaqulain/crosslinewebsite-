@@ -191,6 +191,14 @@ function buildOwnerRows(store: AppStore, from: string, to: string): OwnerExportR
     row.incomeTotal += i.amount;
   }
 
+  for (const i of (store.oldIncomes ?? []).filter((x) => inRange(x.date, from, to))) {
+    if (!i.ownerId) continue;
+    const row = byId.get(i.ownerId);
+    if (!row) continue;
+    row.otherIncome += i.amount;
+    row.incomeTotal += i.amount;
+  }
+
   for (const d of store.dieselExpenses.filter((x) => inRange(x.date, from, to))) {
     if (!d.ownerId) continue;
     const row = byId.get(d.ownerId);
@@ -201,6 +209,14 @@ function buildOwnerRows(store: AppStore, from: string, to: string): OwnerExportR
   }
 
   for (const o of (store.otherExpenses ?? []).filter((x) => inRange(x.date, from, to))) {
+    if (!o.ownerId) continue;
+    const row = byId.get(o.ownerId);
+    if (!row) continue;
+    row.otherExpense += o.amount;
+    row.expenseTotal += o.amount;
+  }
+
+  for (const o of (store.oldExpenses ?? []).filter((x) => inRange(x.date, from, to))) {
     if (!o.ownerId) continue;
     const row = byId.get(o.ownerId);
     if (!row) continue;
@@ -294,6 +310,22 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
     });
   }
 
+  for (const i of store.oldIncomes ?? []) {
+    if (!inRange(i.date, from, to)) continue;
+    incomeRows.push({
+      date: i.date,
+      dateLabel: fmtDate(i.date),
+      category: "Old income",
+      description: i.title,
+      customer: "—",
+      session: "—",
+      sessionPrice: "",
+      received: i.amount,
+      udhari: "",
+      owner: getOwnerName(store, i.ownerId),
+    });
+  }
+
   for (const e of store.financeEntries.filter((x) => x.type === "income")) {
     if (!inRange(e.date, from, to)) continue;
     incomeRows.push({
@@ -328,6 +360,18 @@ export function buildFinanceReport(store: AppStore, from: string, to: string, ra
       date: o.date,
       dateLabel: fmtDate(o.date),
       category: o.category,
+      description: o.title,
+      amount: o.amount,
+      owner: getOwnerName(store, o.ownerId),
+    });
+  }
+
+  for (const o of store.oldExpenses ?? []) {
+    if (!inRange(o.date, from, to)) continue;
+    expenseRows.push({
+      date: o.date,
+      dateLabel: fmtDate(o.date),
+      category: "Old expense",
       description: o.title,
       amount: o.amount,
       owner: getOwnerName(store, o.ownerId),

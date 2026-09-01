@@ -11,6 +11,8 @@ export interface ClearPeriodPreview {
   to: string;
   bookings: number;
   oldSessions: number;
+  oldExpenses: number;
+  oldIncomes: number;
   dieselExpenses: number;
   otherExpenses: number;
   otherIncomes: number;
@@ -31,6 +33,8 @@ export function previewClearPeriod(store: AppStore, from: string, to: string): C
       to,
       bookings: 0,
       oldSessions: 0,
+      oldExpenses: 0,
+      oldIncomes: 0,
       dieselExpenses: 0,
       otherExpenses: 0,
       otherIncomes: 0,
@@ -45,6 +49,8 @@ export function previewClearPeriod(store: AppStore, from: string, to: string): C
 
   const bookings = store.bookings.filter((b) => inPeriod(b.date)).length;
   const oldSessions = (store.matches ?? []).filter((m) => inPeriod(m.date)).length;
+  const oldExpenses = (store.oldExpenses ?? []).filter((o) => inPeriod(o.date)).length;
+  const oldIncomes = (store.oldIncomes ?? []).filter((i) => inPeriod(i.date)).length;
   const dieselExpenses = store.dieselExpenses.filter((d) => inPeriod(d.date)).length;
   const otherExpenses = (store.otherExpenses ?? []).filter((o) => inPeriod(o.date)).length;
   const otherIncomes = (store.otherIncomes ?? []).filter((i) => inPeriod(i.date)).length;
@@ -65,6 +71,8 @@ export function previewClearPeriod(store: AppStore, from: string, to: string): C
   const totalRecords =
     bookings +
     oldSessions +
+    oldExpenses +
+    oldIncomes +
     dieselExpenses +
     otherExpenses +
     otherIncomes +
@@ -78,6 +86,8 @@ export function previewClearPeriod(store: AppStore, from: string, to: string): C
     to,
     bookings,
     oldSessions,
+    oldExpenses,
+    oldIncomes,
     dieselExpenses,
     otherExpenses,
     otherIncomes,
@@ -110,6 +120,8 @@ export function clearPeriodData(store: AppStore, from: string, to: string): AppS
     ...store,
     bookings: store.bookings.filter((b) => !inPeriod(b.date)),
     matches: (store.matches ?? []).filter((m) => !inPeriod(m.date)),
+    oldExpenses: (store.oldExpenses ?? []).filter((o) => !inPeriod(o.date)),
+    oldIncomes: (store.oldIncomes ?? []).filter((i) => !inPeriod(i.date)),
     dieselExpenses: store.dieselExpenses.filter((d) => !inPeriod(d.date)),
     otherExpenses: (store.otherExpenses ?? []).filter((o) => !inPeriod(o.date)),
     otherIncomes: (store.otherIncomes ?? []).filter((i) => !inPeriod(i.date)),

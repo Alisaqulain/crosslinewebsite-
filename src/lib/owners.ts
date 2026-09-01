@@ -40,7 +40,10 @@ export function getOwnerFinanceStats(store: AppStore): OwnerFinanceStat[] {
     );
     const oldSessionIncome = oldSessionRows.reduce((s, m) => s + matchAmountReceived(m), 0);
 
-    const otherIncomeRows = (store.otherIncomes ?? []).filter((i) => i.ownerId === owner.id);
+    const otherIncomeRows = [
+      ...(store.otherIncomes ?? []),
+      ...(store.oldIncomes ?? []),
+    ].filter((i) => i.ownerId === owner.id);
     const otherIncome = otherIncomeRows.reduce((s, i) => s + i.amount, 0);
 
     const dieselRows = store.dieselExpenses.filter((d) => d.ownerId === owner.id);
@@ -49,7 +52,10 @@ export function getOwnerFinanceStats(store: AppStore): OwnerFinanceStat[] {
     const ballPurchaseRows = store.ballPurchases.filter((p) => p.ownerId === owner.id);
     const ballPurchaseExpense = ballPurchaseRows.reduce((s, p) => s + p.purchasePrice, 0);
 
-    const otherExpenseRows = (store.otherExpenses ?? []).filter((o) => o.ownerId === owner.id);
+    const otherExpenseRows = [
+      ...(store.otherExpenses ?? []),
+      ...(store.oldExpenses ?? []),
+    ].filter((o) => o.ownerId === owner.id);
     const otherExpense = otherExpenseRows.reduce((s, o) => s + o.amount, 0);
 
     const incomeTotal = bookingIncome + oldSessionIncome + otherIncome;

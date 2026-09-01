@@ -67,6 +67,8 @@ export const defaultStore: AppStore = {
   savedMonthlyReports: [],
   otherExpenses: [],
   otherIncomes: [],
+  oldExpenses: [],
+  oldIncomes: [],
   financeEntries: [],
   gallery: galleryMedia,
   siteContent: {

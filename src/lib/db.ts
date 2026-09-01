@@ -35,6 +35,8 @@ function mergeStore(parsed: Partial<AppStore>): AppStore {
     savedMonthlyReports: parsed.savedMonthlyReports ?? defaultStore.savedMonthlyReports,
     otherExpenses: parsed.otherExpenses ?? defaultStore.otherExpenses,
     otherIncomes: parsed.otherIncomes ?? defaultStore.otherIncomes,
+    oldExpenses: parsed.oldExpenses ?? defaultStore.oldExpenses,
+    oldIncomes: parsed.oldIncomes ?? defaultStore.oldIncomes,
     financeEntries: parsed.financeEntries ?? defaultStore.financeEntries,
     contactMessages: parsed.contactMessages ?? defaultStore.contactMessages,
     slots: Array.isArray(parsed.slots) ? parsed.slots : defaultStore.slots,

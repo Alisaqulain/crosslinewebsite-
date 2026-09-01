@@ -169,6 +169,9 @@ export default function AdminDashboardPage() {
               { label: "Walk-in bookings (received)", amount: finance.allTimeWalkInIncome },
               { label: "Old sessions (received)", amount: finance.oldSessionIncomeTotal },
               { label: "Other income", amount: finance.otherIncomeTotal },
+              ...(finance.oldIncomeTotal > 0
+                ? [{ label: "Old income (backfill)", amount: finance.oldIncomeTotal }]
+                : []),
               { label: "Manual income entries", amount: manualIncomeAll },
             ].map((row) => (
               <div
@@ -194,6 +197,9 @@ export default function AdminDashboardPage() {
               { label: "Diesel", amount: finance.dieselTotal },
               { label: "Ball purchases", amount: finance.ballPurchaseTotal },
               { label: "Other expenses", amount: finance.otherExpenseTotal },
+              ...(finance.oldExpenseTotal > 0
+                ? [{ label: "Old expenses (backfill)", amount: finance.oldExpenseTotal }]
+                : []),
             ].map((row) => (
               <div
                 key={row.label}

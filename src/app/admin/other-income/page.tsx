@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminHeader";
 import { AdminCollapsibleForm } from "@/components/admin/AdminCollapsibleForm";
+import { OldIncomeSection } from "@/components/admin/OldIncomeSection";
 import { BallStockBar, BallStockTable } from "@/components/admin/BallStockBar";
 import { SessionOwnerSelect } from "@/components/admin/SessionOwnerSelect";
 import { defaultOwnerId, useSessionOwnerLock } from "@/hooks/useSessionOwnerLock";
@@ -66,8 +68,12 @@ const emptyOtherForm = () => ({
   ownerId: "",
 });
 
+type IncomeTab = "current" | "old-income";
+
 export default function AdminOtherIncomePage() {
+  const router = useRouter();
   const { toast } = useToast();
+  const [tab, setTab] = useState<IncomeTab>("current");
   const [store, setStore] = useState<AppStore | null>(null);
   const [owners, setOwners] = useState<StadiumOwner[]>([]);
   const [incomes, setIncomes] = useState<OtherIncome[]>([]);
@@ -80,6 +86,21 @@ export default function AdminOtherIncomePage() {
   const [ballForm, setBallForm] = useState(emptyBallForm);
   const [otherForm, setOtherForm] = useState(emptyOtherForm);
   const { lockedOwnerId, lockedOwnerName } = useSessionOwnerLock();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "old-income") setTab("old-income");
+    }
+  }, []);
+
+  const switchTab = (next: IncomeTab) => {
+    setTab(next);
+    router.replace(
+      next === "old-income" ? "/admin/other-income?tab=old-income" : "/admin/other-income",
+      { scroll: false }
+    );
+  };
 
   useEffect(() => {
     fetchAdminStore().then(({ store: s }) => {
@@ -269,6 +290,32 @@ export default function AdminOtherIncomePage() {
 
   return (
     <AdminShell title="Other income">
+      <div className="flex flex-wrap gap-2 mb-6">
+        {(
+          [
+            { id: "current" as const, label: "Current income" },
+            { id: "old-income" as const, label: "Old income" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => switchTab(t.id)}
+            className={`px-5 py-2.5 rounded-full text-sm font-semibold min-h-[44px] transition-colors ${
+              tab === t.id
+                ? "admin-filter-active bg-[var(--brand-red)]/10 text-[var(--brand-red)] border border-[var(--brand-red)]/20"
+                : "admin-filter bg-white text-[var(--text-muted)] border border-[var(--border)] hover:text-[var(--navy)]"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "old-income" ? (
+        <OldIncomeSection />
+      ) : (
+        <>
       <p className="admin-page-intro">
         Record ball sales and any other income — sponsorship, drinks, rent, fees, etc.
       </p>
@@ -572,6 +619,8 @@ export default function AdminOtherIncomePage() {
           </Card>
         </div>
       </div>
+        </>
+      )}
     </AdminShell>
   );
 }
